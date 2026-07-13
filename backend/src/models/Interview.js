@@ -44,6 +44,12 @@ const interviewSchema = new mongoose.Schema({
     default: () => crypto.randomBytes(16).toString('hex'),
     unique: true
   },
+  // Secret code (OTP) - separate from URL token
+  secretCode: {
+    type: String,
+    default: () => Math.floor(1000 + Math.random() * 9000).toString(), // 4-digit OTP
+    // default: () => crypto.randomBytes(2).toString('hex'), // For hex codes like a1b2
+  },
   accessEmail: {
     type: String,
     trim: true,

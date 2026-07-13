@@ -32,10 +32,19 @@ const sendInterviewInvitation = async (interview) => {
           <p><strong>Duration:</strong> ${interview.duration} minutes</p>
         </div>
 
-        <p>To start your interview, click the button below:</p>
+        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+        <div style="background: #fef3c7; border: 2px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin: 0 0 15px; color: #92400e;">🎯 Your Access Credentials</h3>
+          <p style="margin: 10px 0;"><strong>Email:</strong> ${interview.intervieweeEmail}</p>
+          <p style="margin: 10px 0;"><strong>Secret Code:</strong> <span style="font-family: monospace; background: #fff; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${interview.secretCode}</span></p>
+          <p style="margin: 15px 0 0; color: #92400e; font-size: 14px;">Keep these credentials safe. You'll need them to access the interview.</p>
+        </div>
+
+        <p>To start your interview at the scheduled time, click the button below:</p>
 
         <a href="${interviewLink}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-          Start Interview
+          Go to Interview Portal
         </a>
 
         <p style="margin-top: 20px;">Or copy this link:</p>
@@ -43,16 +52,8 @@ const sendInterviewInvitation = async (interview) => {
           ${interviewLink}
         </p>
 
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
-
-        <p style="color: #64748b; font-size: 12px;">
-          <strong>Access Credentials:</strong><br>
-          Email: ${interview.intervieweeEmail}<br>
-          Token: ${interview.accessToken}
-        </p>
-
-        <p style="color: #64748b; font-size: 12px;">
-          Please use these credentials when accessing the interview portal.
+        <p style="color: #64748b; font-size: 12px; margin-top: 30px;">
+          Note: You can only access the interview at the scheduled time. Use your email and secret code to log in.
         </p>
       </div>
     `

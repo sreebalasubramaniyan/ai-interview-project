@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Interview = require('../models/Interview');
-const { sendInterviewInvitation } = require('../services/email');
+const { sendInterviewInvitation, sendResultsToAdmin } = require('../services/email');
 
 // @route   GET /api/interviews
 // @desc    Get all interviews
@@ -107,14 +107,20 @@ router.put('/:id', async (req, res) => {
 // @access  Public
 router.post('/token/:token/access', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, secretCode } = req.body;
+
+    // Find interview by URL token (accessToken)
     const interview = await Interview.findOne({
-      accessToken: req.params.token,
-      accessEmail: email
+      accessToken: req.params.token
     });
 
     if (!interview) {
-      return res.status(401).json({ valid: false, message: 'Invalid credentials' });
+      return res.status(401).json({ valid: false, message: 'Invalid interview link' });
+    }
+
+    // Validate email and secret code
+    if (interview.accessEmail !== email || interview.secretCode !== secretCode) {
+      return res.status(401).json({ valid: false, message: 'Invalid email or secret code' });
     }
 
     if (interview.status === 'completed') {
@@ -165,6 +171,54 @@ router.post('/token/:token/start', async (req, res) => {
     await interview.save();
 
     res.json({ success: true, interview });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// @route   POST /api/interviews/token/:token/submit
+// @desc    Submit interview solution
+// @access  Public
+router.post('/token/:token/submit', async (req, res) => {
+  try {
+    const { submittedCode, language, isAutoSubmit } = req.body;
+
+    const interview = await Interview.findOne({ accessToken: req.params.token });
+
+    if (!interview) {
+      return res.status(404).json({ message: 'Interview not found' });
+    }
+
+    if (interview.status === 'completed') {
+      return res.status(400).json({ message: 'Interview already completed' });
+    }
+
+    // Update interview with submission
+    interview.status = 'completed';
+    interview.completedAt = new Date();
+    interview.result = {
+      submittedCode: submittedCode || '',
+      language: language || 'javascript',
+      status: 'pending', // Will be updated after code execution
+      executionTime: 0
+    };
+    interview.submittedCode = submittedCode;
+    interview.language = language;
+
+    const updatedInterview = await interview.save();
+
+    // Send results to admin
+    try {
+      await sendResultsToAdmin(updatedInterview);
+    } catch (emailError) {
+      console.error('Failed to send results email:', emailError.message);
+    }
+
+    res.json({
+      success: true,
+      interview: updatedInterview,
+      isAutoSubmit: isAutoSubmit || false
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -1,0 +1,93 @@
+.completion-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  padding: 20px;
+}
+
+.completion-card {
+  background: #282828;
+  border-radius: 16px;
+  padding: 3rem;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.completion-icon {
+  font-size: 4rem;
+  margin-bottom: 1.5rem;
+}
+
+.completion-card h1 {
+  color: #fff;
+  font-size: 2rem;
+  margin: 0 0 1rem;
+}
+
+.completion-message {
+  color: #aaa;
+  font-size: 1.1rem;
+  margin: 0 0 2rem;
+  line-height: 1.6;
+}
+
+.completion-details {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #333;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: #888;
+}
+
+.detail-value {
+  color: #fff;
+  font-weight: 500;
+}
+
+.status-completed {
+  color: #00b8a3;
+}
+
+.completion-note {
+  background: #2d2d2d;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+.completion-note p {
+  margin: 0.5rem 0;
+  color: #aaa;
+  font-size: 0.95rem;
+}
+
+.completion-footer {
+  padding-top: 1rem;
+  border-top: 1px solid #333;
+}
+
+.thank-you {
+  color: #ffa116;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
