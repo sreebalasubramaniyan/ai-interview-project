@@ -27,6 +27,18 @@ const questionSchema = new mongoose.Schema({
       }
     }
   ],
+  hiddenTestCases: [
+    {
+      input: {
+        type: String,
+        required: true
+      },
+      output: {
+        type: String,
+        required: true
+      }
+    }
+  ],
   constraints: [
     {
       type: String

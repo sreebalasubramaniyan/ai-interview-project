@@ -2,15 +2,32 @@ const mongoose = require('mongoose');
 const crypto = require('crypto');
 
 const interviewSchema = new mongoose.Schema({
+  // Multiple questions support
+  questions: [{
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Question',
+      required: true
+    },
+    questionTitle: {
+      type: String,
+      required: true
+    },
+    order: {
+      type: Number,
+      default: 1
+    }
+  }],
+
+  // Keep for backward compatibility (single question)
   questionId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Question',
-    required: true
+    ref: 'Question'
   },
   questionTitle: {
-    type: String,
-    required: true
+    type: String
   },
+
   intervieweeName: {
     type: String,
     required: true,
@@ -48,7 +65,6 @@ const interviewSchema = new mongoose.Schema({
   secretCode: {
     type: String,
     default: () => Math.floor(1000 + Math.random() * 9000).toString(), // 4-digit OTP
-    // default: () => crypto.randomBytes(2).toString('hex'), // For hex codes like a1b2
   },
   accessEmail: {
     type: String,
@@ -64,7 +80,7 @@ const interviewSchema = new mongoose.Schema({
     type: Date
   },
 
-  // Submission details
+  // Submission details - per question
   result: {
     submittedCode: String,
     language: String,
@@ -75,7 +91,32 @@ const interviewSchema = new mongoose.Schema({
     executionTime: Number
   },
 
-  // Detailed test case results
+  // Per-question results
+  questionResults: [{
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Question'
+    },
+    submittedCode: String,
+    language: String,
+    status: {
+      type: String,
+      enum: ['passed', 'failed', 'pending']
+    },
+    executionResults: [{
+      testCase: {
+        input: String,
+        expected: String,
+        actual: String,
+        passed: Boolean,
+        output: String,
+        error: String,
+        executionTime: Number
+      }
+    }]
+  }],
+
+  // Detailed test case results (legacy - for single question)
   executionResults: [
     {
       testCase: {

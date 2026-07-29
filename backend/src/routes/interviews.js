@@ -35,11 +35,53 @@ router.get('/:id', async (req, res) => {
 // @access  Public
 router.post('/', async (req, res) => {
   try {
-    const { questionId, questionTitle, intervieweeName, intervieweeEmail, scheduledAt, duration } = req.body;
+    const {
+      questionIds, // Array of question IDs
+      questions,   // Array of { questionId, questionTitle, order }
+      questionId,  // Single question (backward compatibility)
+      questionTitle,
+      intervieweeName,
+      intervieweeEmail,
+      scheduledAt,
+      duration
+    } = req.body;
+
+    let interviewQuestions = [];
+
+    // Handle multiple questions
+    if (questionIds && Array.isArray(questionIds) && questionIds.length > 0) {
+      // questionIds is array of question IDs - need to fetch titles
+      const Question = require('../models/Question');
+      const questionDocs = await Question.find({ _id: { $in: questionIds } });
+
+      interviewQuestions = questionIds.map((qId, index) => {
+        const qDoc = questionDocs.find(q => q._id.toString() === qId);
+        return {
+          questionId: qId,
+          questionTitle: qDoc ? qDoc.title : `Question ${index + 1}`,
+          order: index + 1
+        };
+      });
+    } else if (questions && Array.isArray(questions) && questions.length > 0) {
+      // questions array already provided
+      interviewQuestions = questions.map((q, index) => ({
+        questionId: q.questionId,
+        questionTitle: q.questionTitle,
+        order: q.order || index + 1
+      }));
+    } else if (questionId) {
+      // Single question (backward compatibility)
+      interviewQuestions = [{
+        questionId,
+        questionTitle: questionTitle || 'Question',
+        order: 1
+      }];
+    }
 
     const interview = new Interview({
-      questionId,
-      questionTitle,
+      questions: interviewQuestions,
+      questionId: interviewQuestions[0]?.questionId, // Keep for compatibility
+      questionTitle: interviewQuestions[0]?.questionTitle,
       intervieweeName,
       intervieweeEmail,
       scheduledAt,
@@ -127,7 +169,26 @@ router.post('/token/:token/access', async (req, res) => {
       return res.status(400).json({ valid: false, message: 'Interview already completed' });
     }
 
-    res.json({ valid: true, interview });
+    // Populate all question details
+    let populatedInterview = interview.toObject();
+    if (interview.questions && interview.questions.length > 0) {
+      const questionIds = interview.questions.map(q => q.questionId);
+      const Question = require('../models/Question');
+      const questionDocs = await Question.find({ _id: { $in: questionIds } });
+
+      populatedInterview.questions = interview.questions.map(q => {
+        const qDoc = questionDocs.find(doc => doc._id.toString() === q.questionId.toString());
+        return {
+          questionId: q.questionId,
+          questionTitle: q.questionTitle,
+          order: q.order,
+          _id: q._id,
+          question: qDoc ? qDoc.toObject() : null
+        };
+      });
+    }
+
+    res.json({ valid: true, interview: populatedInterview });
   } catch (error) {
     res.status(500).json({ valid: false, message: error.message });
   }
@@ -138,14 +199,33 @@ router.post('/token/:token/access', async (req, res) => {
 // @access  Public
 router.get('/token/:token', async (req, res) => {
   try {
-    const interview = await Interview.findOne({ accessToken: req.params.token })
-      .populate('questionId');
+    const interview = await Interview.findOne({ accessToken: req.params.token });
 
     if (!interview) {
       return res.status(404).json({ message: 'Interview not found' });
     }
 
-    res.json(interview);
+    // Populate all question details
+    let populatedInterview = interview.toObject();
+    if (interview.questions && interview.questions.length > 0) {
+      const questionIds = interview.questions.map(q => q.questionId);
+      const Question = require('../models/Question');
+      const questionDocs = await Question.find({ _id: { $in: questionIds } });
+
+      // Add full question details to response
+      populatedInterview.questions = interview.questions.map(q => {
+        const qDoc = questionDocs.find(doc => doc._id.toString() === q.questionId.toString());
+        return {
+          questionId: q.questionId,
+          questionTitle: q.questionTitle,
+          order: q.order,
+          _id: q._id,
+          question: qDoc ? qDoc.toObject() : null
+        };
+      });
+    }
+
+    res.json(populatedInterview);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -181,7 +261,7 @@ router.post('/token/:token/start', async (req, res) => {
 // @access  Public
 router.post('/token/:token/submit', async (req, res) => {
   try {
-    const { submittedCode, language, isAutoSubmit } = req.body;
+    const { submittedCode, language, isAutoSubmit, questionIndex, results, executionResults, testSummary } = req.body;
 
     const interview = await Interview.findOne({ accessToken: req.params.token });
 
@@ -193,25 +273,58 @@ router.post('/token/:token/submit', async (req, res) => {
       return res.status(400).json({ message: 'Interview already completed' });
     }
 
-    // Update interview with submission
-    interview.status = 'completed';
-    interview.completedAt = new Date();
-    interview.result = {
-      submittedCode: submittedCode || '',
-      language: language || 'javascript',
-      status: 'pending', // Will be updated after code execution
-      executionTime: 0
-    };
-    interview.submittedCode = submittedCode;
-    interview.language = language;
+    // Handle per-question submission
+    if (questionIndex !== undefined && interview.questions && interview.questions.length > 0) {
+      // Update or add question result
+      const existingIndex = interview.questionResults.findIndex(
+        qr => qr.questionId.toString() === interview.questions[questionIndex]?.questionId.toString()
+      );
+
+      const questionResult = {
+        questionId: interview.questions[questionIndex].questionId,
+        submittedCode: submittedCode || '',
+        language: language || 'javascript',
+        status: testSummary?.passed === testSummary?.total ? 'passed' : 'failed',
+        executionResults: executionResults || results?.testResults || [],
+        testSummary: testSummary || null
+      };
+
+      if (existingIndex >= 0) {
+        interview.questionResults[existingIndex] = questionResult;
+      } else {
+        interview.questionResults.push(questionResult);
+      }
+
+      // Check if all questions are answered
+      const answeredCount = interview.questionResults.length;
+      const totalQuestions = interview.questions.length;
+
+      // If all questions answered, mark as completed
+      if (answeredCount >= totalQuestions) {
+        interview.status = 'completed';
+        interview.completedAt = new Date();
+      }
+    } else {
+      // Legacy single question submission
+      interview.status = 'completed';
+      interview.completedAt = new Date();
+      interview.result = {
+        submittedCode: submittedCode || '',
+        language: language || 'javascript',
+        status: 'pending',
+        executionTime: 0
+      };
+    }
 
     const updatedInterview = await interview.save();
 
-    // Send results to admin
-    try {
-      await sendResultsToAdmin(updatedInterview);
-    } catch (emailError) {
-      console.error('Failed to send results email:', emailError.message);
+    // Send results to admin when interview is completed
+    if (interview.status === 'completed') {
+      try {
+        await sendResultsToAdmin(updatedInterview);
+      } catch (emailError) {
+        console.error('Failed to send results email:', emailError.message);
+      }
     }
 
     res.json({

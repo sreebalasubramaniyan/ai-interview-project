@@ -12,7 +12,8 @@ export default function QuestionForm() {
     difficulty: 'Easy',
     description: '',
     constraints: '',
-    testCases: [{ input: '', output: '' }]
+    testCases: [{ input: '', output: '' }],
+    hiddenTestCases: [{ input: '', output: '' }]
   });
 
   const handleChange = (e) => {
@@ -26,6 +27,12 @@ export default function QuestionForm() {
     setFormData(prev => ({ ...prev, testCases: newTestCases }));
   };
 
+  const handleHiddenTestCaseChange = (index, field, value) => {
+    const newTestCases = [...formData.hiddenTestCases];
+    newTestCases[index] = { ...newTestCases[index], [field]: value };
+    setFormData(prev => ({ ...prev, hiddenTestCases: newTestCases }));
+  };
+
   const addTestCase = () => {
     setFormData(prev => ({
       ...prev,
@@ -33,10 +40,24 @@ export default function QuestionForm() {
     }));
   };
 
+  const addHiddenTestCase = () => {
+    setFormData(prev => ({
+      ...prev,
+      hiddenTestCases: [...prev.hiddenTestCases, { input: '', output: '' }]
+    }));
+  };
+
   const removeTestCase = (index) => {
     if (formData.testCases.length > 1) {
       const newTestCases = formData.testCases.filter((_, i) => i !== index);
       setFormData(prev => ({ ...prev, testCases: newTestCases }));
+    }
+  };
+
+  const removeHiddenTestCase = (index) => {
+    if (formData.hiddenTestCases.length > 1) {
+      const newTestCases = formData.hiddenTestCases.filter((_, i) => i !== index);
+      setFormData(prev => ({ ...prev, hiddenTestCases: newTestCases }));
     }
   };
 
@@ -48,7 +69,8 @@ export default function QuestionForm() {
       difficulty: formData.difficulty,
       description: formData.description,
       constraints: formData.constraints.split('\n').filter(c => c.trim()),
-      testCases: formData.testCases.filter(tc => tc.input && tc.output)
+      testCases: formData.testCases.filter(tc => tc.input && tc.output),
+      hiddenTestCases: formData.hiddenTestCases.filter(tc => tc.input && tc.output)
     };
 
     await addQuestion(questionData);
@@ -145,6 +167,46 @@ export default function QuestionForm() {
           </div>
           <button type="button" className="add-test-case" onClick={addTestCase}>
             + Add Test Case
+          </button>
+        </div>
+
+        <div className="form-group">
+          <label>Hidden Test Cases (not visible to interviewee)</label>
+          <div className="test-cases">
+            {formData.hiddenTestCases.map((tc, index) => (
+              <div key={index} className="test-case-row">
+                <div className="test-case-field">
+                  <span>Input</span>
+                  <input
+                    type="text"
+                    value={tc.input}
+                    onChange={(e) => handleHiddenTestCaseChange(index, 'input', e.target.value)}
+                    placeholder='e.g., {"nums":[3,3],"target":6}'
+                  />
+                </div>
+                <div className="test-case-field">
+                  <span>Output</span>
+                  <input
+                    type="text"
+                    value={tc.output}
+                    onChange={(e) => handleHiddenTestCaseChange(index, 'output', e.target.value)}
+                    placeholder="e.g., [0,1]"
+                  />
+                </div>
+                {formData.hiddenTestCases.length > 1 && (
+                  <button
+                    type="button"
+                    className="remove-test-case"
+                    onClick={() => removeHiddenTestCase(index)}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          <button type="button" className="add-test-case" onClick={addHiddenTestCase}>
+            + Add Hidden Test Case
           </button>
         </div>
 

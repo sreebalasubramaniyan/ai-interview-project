@@ -1,5 +1,6 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import CodeEditor from '../../components/interview/CodeEditor';
 import './IntervieweeDashboard.css';
 
 const API_URL = 'http://localhost:5000/api/interviews';
@@ -8,55 +9,96 @@ export default function IntervieweeDashboard() {
   const { token } = useParams();
   const navigate = useNavigate();
   const [interview, setInterview] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [question, setQuestion] = useState(null);
   const [loading, setLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState(null);
-  const [code, setCode] = useState('// Write your solution here\n\nfunction solution(nums, target) {\n  // TODO: Implement your solution\n  \n}');
+  const [code, setCode] = useState('// Write your solution here\n\nfunction solution(input) {\n  // TODO: Implement your solution\n  // input contains the JSON object from test case\n  // Example: input = {"nums":[2,7,11,15],"target":9}\n  return [];\n}');
   const [language, setLanguage] = useState('javascript');
   const [submitting, setSubmitting] = useState(false);
-  const [showOutput, setShowOutput] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [showOutput, setShowOutput] = useState(true);
   const [output, setOutput] = useState(null);
+  const [testResults, setTestResults] = useState(null);
+
+  // Resizable console panel
+  const [consoleHeight, setConsoleHeight] = useState(200);
+  const [isDragging, setIsDragging] = useState(false);
+  const consoleRef = useRef(null);
   const timerRef = useRef(null);
 
   // Fetch interview and question data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get interview from sessionStorage
-        const storedData = sessionStorage.getItem('interviewData');
-        if (!storedData) {
-          navigate(`/interview/${token}`);
-          return;
-        }
+        const response = await fetch(`${API_URL}/token/${token}`);
 
-        const interviewData = JSON.parse(storedData);
-        setInterview(interviewData);
+        if (!response.ok) {
+          const storedData = sessionStorage.getItem('interviewData');
+          if (!storedData) {
+            navigate(`/interview/${token}`);
+            return;
+          }
+          const interviewData = JSON.parse(storedData);
+          setInterview(interviewData);
 
-        // If questionId exists, fetch the question details
-        if (interviewData.questionId) {
-          const questionResponse = await fetch(
-            `http://localhost:5000/api/questions/${interviewData.questionId}`
-          );
-          if (questionResponse.ok) {
-            const questionData = await questionResponse.json();
-            setQuestion(questionData);
+          if (interviewData.questions && interviewData.questions.length > 0) {
+            const questionData = interviewData.questions.map(q => q.question).filter(Boolean);
+            setQuestions(questionData);
+            if (questionData.length > 0) {
+              setQuestion(questionData[0]);
+              setCurrentQuestionIndex(0);
+            }
+          } else if (interviewData.questionId) {
+            const questionResponse = await fetch(
+              `http://localhost:5000/api/questions/${interviewData.questionId}`
+            );
+            if (questionResponse.ok) {
+              const questionData = await questionResponse.json();
+              setQuestion(questionData);
+              setQuestions([questionData]);
+            }
+          }
+        } else {
+          const interviewData = await response.json();
+          setInterview(interviewData);
+          sessionStorage.setItem('interviewData', JSON.stringify(interviewData));
+
+          if (interviewData.questions && interviewData.questions.length > 0) {
+            const questionData = interviewData.questions.map(q => q.question).filter(Boolean);
+            setQuestions(questionData);
+            if (questionData.length > 0) {
+              setQuestion(questionData[0]);
+              setCurrentQuestionIndex(0);
+            }
+          } else if (interviewData.questionId) {
+            const questionResponse = await fetch(
+              `http://localhost:5000/api/questions/${interviewData.questionId}`
+            );
+            if (questionResponse.ok) {
+              const questionData = await questionResponse.json();
+              setQuestion(questionData);
+              setQuestions([questionData]);
+            }
           }
         }
 
-        // Mark interview as started
         await fetch(`${API_URL}/token/${token}/start`, {
           method: 'POST'
         });
 
-        // Calculate time remaining
-        if (interviewData.duration && interviewData.startedAt) {
+        const interviewData = sessionStorage.getItem('interviewData')
+          ? JSON.parse(sessionStorage.getItem('interviewData'))
+          : interview;
+
+        if (interviewData?.duration && interviewData?.startedAt) {
           const startTime = new Date(interviewData.startedAt).getTime();
           const durationMs = interviewData.duration * 60 * 1000;
           const endTime = startTime + durationMs;
           const remaining = endTime - new Date().getTime();
           setTimeRemaining(remaining);
-        } else if (interviewData.duration) {
-          // If startedAt not set yet, use duration from scheduled time
+        } else if (interviewData?.duration) {
           const durationMs = interviewData.duration * 60 * 1000;
           setTimeRemaining(durationMs);
         }
@@ -78,7 +120,7 @@ export default function IntervieweeDashboard() {
       setTimeRemaining(prev => {
         if (prev <= 1000) {
           clearInterval(timerRef.current);
-          handleSubmit(true); // Auto-submit when time's up
+          handleSubmit(true);
           return 0;
         }
         return prev - 1000;
@@ -94,44 +136,113 @@ export default function IntervieweeDashboard() {
 
   const formatTime = (ms) => {
     if (ms <= 0) return '00:00';
-
     const totalSeconds = Math.floor(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
-
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const isTimeLow = timeRemaining !== null && timeRemaining < 5 * 60 * 1000; // Less than 5 minutes
+  const isTimeLow = timeRemaining !== null && timeRemaining < 5 * 60 * 1000;
+
+  // Handle console resize
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging || !consoleRef.current) return;
+    const container = consoleRef.current.parentElement;
+    const containerRect = container.getBoundingClientRect();
+    const newHeight = containerRect.bottom - e.clientY;
+    const minHeight = 100;
+    const maxHeight = containerRect.height * 0.6;
+    const clampedHeight = Math.min(Math.max(newHeight, minHeight), maxHeight);
+    setConsoleHeight(clampedHeight);
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  const handleRun = async () => {
+    if (running || !question?._id) return;
+    setRunning(true);
+    setShowOutput(true);
+    setTestResults(null);
+    setOutput(null);
+
+    try {
+      const response = await fetch('http://localhost:5000/api/execute/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, language, questionId: question._id })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setTestResults(data.results);
+        setOutput({ summary: data.summary });
+      } else {
+        setOutput({ error: data.message || 'Failed to run code' });
+      }
+    } catch (err) {
+      setOutput({ error: 'Failed to connect to server' });
+    } finally {
+      setRunning(false);
+    }
+  };
 
   const handleSubmit = async (isAutoSubmit = false) => {
     if (submitting) return;
-
     setSubmitting(true);
 
     try {
+      const executeResponse = await fetch('http://localhost:5000/api/execute/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, language, questionId: question?._id })
+      });
+
+      const executeData = await executeResponse.json();
+
       const response = await fetch(`${API_URL}/token/${token}/submit`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           submittedCode: code,
           language: language,
-          isAutoSubmit: isAutoSubmit
+          isAutoSubmit: isAutoSubmit,
+          executionResults: executeData.results || [],
+          testSummary: executeData.summary || null
         }),
       });
 
       const data = await response.json();
-
       if (response.ok) {
-        // Navigate to completion page
         sessionStorage.removeItem('interviewData');
         navigate(`/interview/${token}/complete`, {
-          state: {
-            interview: data.interview,
-            isAutoSubmit: isAutoSubmit
-          }
+          state: { interview: data.interview, isAutoSubmit: isAutoSubmit, testResults: executeData.summary }
         });
       } else {
         setOutput({ error: data.message || 'Failed to submit' });
@@ -145,12 +256,13 @@ export default function IntervieweeDashboard() {
     }
   };
 
-  const getDifficultyClass = (difficulty) => {
-    switch (difficulty) {
-      case 'Easy': return 'difficulty-easy';
-      case 'Medium': return 'difficulty-medium';
-      case 'Hard': return 'difficulty-hard';
-      default: return '';
+  const getFileExtension = () => {
+    switch (language) {
+      case 'javascript': return 'js';
+      case 'python': return 'py';
+      case 'java': return 'java';
+      case 'cpp': return 'cpp';
+      default: return 'txt';
     }
   };
 
@@ -179,9 +291,27 @@ export default function IntervieweeDashboard() {
   return (
     <div className="interviewee-dashboard">
       {/* Header */}
-      <div className="coding-header">
+      <header className="coding-header">
         <div className="header-left">
-          <h1 className="interview-title">{question?.title || interview.questionTitle}</h1>
+          {questions.length > 1 ? (
+            <select
+              className="question-nav-select"
+              value={currentQuestionIndex}
+              onChange={(e) => {
+                const idx = parseInt(e.target.value);
+                setCurrentQuestionIndex(idx);
+                setQuestion(questions[idx]);
+                setOutput(null);
+                setTestResults(null);
+              }}
+            >
+              {questions.map((q, idx) => (
+                <option key={idx} value={idx}>Question {idx + 1}: {q.title}</option>
+              ))}
+            </select>
+          ) : (
+            <span className="interview-title">Problem</span>
+          )}
         </div>
         <div className="header-center">
           <div className={`timer ${isTimeLow ? 'timer-low' : ''}`}>
@@ -190,41 +320,30 @@ export default function IntervieweeDashboard() {
           </div>
         </div>
         <div className="header-right">
-          <select
-            className="language-select"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value)}
-          >
+          <select className="language-select" value={language} onChange={(e) => setLanguage(e.target.value)}>
             <option value="javascript">JavaScript</option>
             <option value="python">Python</option>
             <option value="java">Java</option>
             <option value="cpp">C++</option>
           </select>
-          <button
-            className="submit-btn"
-            onClick={() => handleSubmit(false)}
-            disabled={submitting}
-          >
+          <button className="run-btn" onClick={handleRun} disabled={running}>
+            {running ? 'Running...' : 'Run'}
+          </button>
+          <button className="submit-btn" onClick={() => handleSubmit(false)} disabled={submitting}>
             {submitting ? 'Submitting...' : 'Submit'}
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="coding-main">
+      <main className="coding-main">
         {/* Left Panel - Question */}
-        <div className="question-panel">
-          <div className="question-header">
-            <span className={`difficulty-badge ${getDifficultyClass(question?.difficulty)}`}>
-              {question?.difficulty || 'Easy'}
-            </span>
-          </div>
-
+        <section className="question-panel">
           <div className="question-content">
+            <h2 className="question-title">{question?.title || interview?.questionTitle || 'Problem'}</h2>
+
             <h3>Description</h3>
-            <p className="question-description">
-              {question?.description || 'No description available'}
-            </p>
+            <p className="question-description">{question?.description || 'No description available'}</p>
 
             {question?.testCases && question.testCases.length > 0 && (
               <div className="examples-section">
@@ -233,8 +352,14 @@ export default function IntervieweeDashboard() {
                   <div key={index} className="example-box">
                     <p><strong>Example {index + 1}:</strong></p>
                     <div className="example-content">
-                      <p><span className="example-label">Input:</span> <code>{testCase.input}</code></p>
-                      <p><span className="example-label">Output:</span> <code>{testCase.output}</code></p>
+                      <div className="example-row">
+                        <span className="example-label">Input:</span>
+                        <span className="example-value">{testCase.input}</span>
+                      </div>
+                      <div className="example-row">
+                        <span className="example-label">Output:</span>
+                        <span className="example-value">{testCase.output}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -252,52 +377,115 @@ export default function IntervieweeDashboard() {
               </div>
             )}
           </div>
-        </div>
+        </section>
 
         {/* Right Panel - Code Editor */}
-        <div className="code-panel">
-          <div className="code-header">
-            <span>Solution</span>
-          </div>
-          <div className="code-editor">
-            <textarea
-              className="code-textarea"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Write your solution here..."
-              spellCheck="false"
-            />
+        <section className="code-panel" ref={consoleRef}>
+          {/* Editor Section */}
+          <div className="editor-section" style={{ flex: showOutput ? '1 1 auto' : '1 1 100%' }}>
+            <div className="editor-header">
+              <div className="file-tab">
+                <span className="file-icon">📄</span>
+                Solution.{getFileExtension()}
+              </div>
+              <div className="editor-actions">
+                <button className={`toggle-btn ${showOutput ? 'active' : ''}`} onClick={() => setShowOutput(!showOutput)}>
+                  {showOutput ? '▼ Console' : '▲ Console'}
+                </button>
+              </div>
+            </div>
+            <div className="code-editor-wrapper">
+              <CodeEditor language={language} code={code} onChange={setCode} />
+            </div>
           </div>
 
-          {/* Output Panel Toggle */}
-          <div className="output-toggle">
-            <button
-              className="toggle-btn"
-              onClick={() => setShowOutput(!showOutput)}
-            >
-              {showOutput ? 'Hide Output' : 'Show Output'}
-            </button>
-          </div>
+          {/* Resize Handle */}
+          {showOutput && (
+            <div className={`resize-handle ${isDragging ? 'dragging' : ''}`} onMouseDown={handleMouseDown}>
+              <div className="resize-line"></div>
+            </div>
+          )}
 
           {/* Output Panel */}
           {showOutput && (
-            <div className="output-panel">
-              <div className="output-header">Output</div>
-              <div className="output-content">
-                {output ? (
-                  output.error ? (
-                    <div className="output-error">{output.error}</div>
-                  ) : (
-                    <pre>{JSON.stringify(output, null, 2)}</pre>
-                  )
+            <div className="output-section" style={{ height: consoleHeight }}>
+              <div className="console-header">
+                <span>Test Results</span>
+                {testResults && output?.summary && (
+                  <span className={`console-status ${output.summary.status}`}>
+                    {output.summary.passed}/{output.summary.total} Passed
+                  </span>
+                )}
+              </div>
+              <div className="console-body">
+                {output?.error ? (
+                  <div className="console-error">
+                    <span className="error-icon">⚠</span>
+                    <span className="error-message">{output.error}</span>
+                  </div>
+                ) : testResults && testResults.length > 0 ? (
+                  <div className="console-results">
+                    {testResults.map((result, index) => (
+                      <div key={index} className={`result-item ${result.passed ? 'passed' : 'failed'}`}>
+                        <div className="result-header">
+                          <span className={`result-icon ${result.passed ? 'pass' : 'fail'}`}>
+                            {result.passed ? '✓' : '✗'}
+                          </span>
+                          <span className="result-title">Test Case {index + 1}</span>
+                          <span className={`result-status ${result.passed ? 'pass' : 'fail'}`}>
+                            {result.passed ? 'Passed' : 'Failed'}
+                          </span>
+                        </div>
+                        <div className="result-details">
+                          <div className="result-row">
+                            <span className="result-label">Input:</span>
+                            <code>{result.input || 'N/A'}</code>
+                          </div>
+                          <div className="result-row">
+                            <span className="result-label">Expected:</span>
+                            <code className="correct">{result.expected || 'N/A'}</code>
+                          </div>
+                          <div className="result-row">
+                            <span className="result-label">Output:</span>
+                            <code className={result.passed ? 'correct' : 'incorrect'}>{result.actual || 'N/A'}</code>
+                          </div>
+                          {result.error && (
+                            <div className="result-row error">
+                              <span className="result-label">Error:</span>
+                              <code>{result.error}</code>
+                            </div>
+                          )}
+                          {result.executionTime !== undefined && (
+                            <div className="result-row">
+                              <span className="result-label">Time:</span>
+                              <code>{result.executionTime} ms</code>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <div className={`summary-bar ${output.summary.status}`}>
+                      <span className="summary-icon">
+                        {output.summary.status === 'all_passed' ? '🎉' : output.summary.status === 'partial' ? '⚠️' : '❌'}
+                      </span>
+                      <span className="summary-text">
+                        {output.summary.status === 'all_passed'
+                          ? 'All test cases passed!'
+                          : `${output.summary.passed}/${output.summary.total} test cases passed`}
+                      </span>
+                    </div>
+                  </div>
                 ) : (
-                  <p className="output-placeholder">Run your code to see output here.</p>
+                  <div className="console-placeholder">
+                    <span className="placeholder-icon">▶</span>
+                    <span>Run your code to see test results here.</span>
+                  </div>
                 )}
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }

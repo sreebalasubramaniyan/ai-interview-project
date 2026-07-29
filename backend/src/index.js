@@ -6,6 +6,7 @@ const connectDB = require('./config/db');
 // Import routes
 const questionsRouter = require('./routes/questions');
 const interviewsRouter = require('./routes/interviews');
+const executeRouter = require('./routes/execute');
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(express.json());
 // Routes
 app.use('/api/questions', questionsRouter);
 app.use('/api/interviews', interviewsRouter);
+app.use('/api/execute', executeRouter);
 
 // Health check route
 app.get('/api/health', (req, res) => {

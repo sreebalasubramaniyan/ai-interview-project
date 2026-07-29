@@ -10,7 +10,7 @@ export default function InterviewForm() {
   const { scheduleInterview, loading } = useInterviews();
 
   const [formData, setFormData] = useState({
-    questionId: '',
+    questionIds: [],
     intervieweeName: '',
     intervieweeEmail: '',
     date: '',
@@ -23,14 +23,40 @@ export default function InterviewForm() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleQuestionToggle = (questionId) => {
+    setFormData(prev => {
+      const currentIds = prev.questionIds || [];
+      if (currentIds.includes(questionId)) {
+        return { ...prev, questionIds: currentIds.filter(id => id !== questionId) };
+      } else {
+        return { ...prev, questionIds: [...currentIds, questionId] };
+      }
+    });
+  };
+
+  const handleMoveQuestion = (questionId, direction) => {
+    setFormData(prev => {
+      const currentIds = [...(prev.questionIds || [])];
+      const index = currentIds.indexOf(questionId);
+      if (direction === 'up' && index > 0) {
+        [currentIds[index - 1], currentIds[index]] = [currentIds[index], currentIds[index - 1]];
+      } else if (direction === 'down' && index < currentIds.length - 1) {
+        [currentIds[index], currentIds[index + 1]] = [currentIds[index + 1], currentIds[index]];
+      }
+      return { ...prev, questionIds: currentIds };
+    });
+  };
+
+  const selectedQuestions = formData.questionIds.map(id => {
+    const q = questions.find(question => question._id === id);
+    return { id, title: q?.title || 'Unknown', difficulty: q?.difficulty || 'Easy' };
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const selectedQuestion = questions.find(q => q._id === formData.questionId);
-
     const interviewData = {
-      questionId: formData.questionId,
-      questionTitle: selectedQuestion?.title || '',
+      questionIds: formData.questionIds,
       intervieweeName: formData.intervieweeName,
       intervieweeEmail: formData.intervieweeEmail,
       scheduledAt: new Date(`${formData.date}T${formData.time}`).toISOString(),
@@ -46,21 +72,57 @@ export default function InterviewForm() {
       <h2>Schedule New Interview</h2>
       <form onSubmit={handleSubmit} className="interview-form">
         <div className="form-group">
-          <label>Select Question</label>
-          <select
-            name="questionId"
-            value={formData.questionId}
-            onChange={handleChange}
-            required
-          >
-            <option value="">Choose a question...</option>
+          <label>Select Questions (select multiple)</label>
+          <div className="question-select-grid">
             {questions.map(q => (
-              <option key={q._id} value={q._id}>
-                {q.title} ({q.difficulty})
-              </option>
+              <div
+                key={q._id}
+                className={`question-select-card ${formData.questionIds.includes(q._id) ? 'selected' : ''}`}
+                onClick={() => handleQuestionToggle(q._id)}
+              >
+                <div className="question-checkbox">
+                  {formData.questionIds.includes(q._id) && <span>✓</span>}
+                </div>
+                <div className="question-info">
+                  <span className="question-title">{q.title}</span>
+                  <span className={`difficulty-badge ${q.difficulty?.toLowerCase()}`}>{q.difficulty}</span>
+                </div>
+              </div>
             ))}
-          </select>
+          </div>
         </div>
+
+        {selectedQuestions.length > 0 && (
+          <div className="form-group">
+            <label>Selected Questions (in order)</label>
+            <div className="selected-questions-list">
+              {selectedQuestions.map((q, index) => (
+                <div key={q.id} className="selected-question-item">
+                  <span className="question-order">{index + 1}</span>
+                  <span className="question-title">{q.title}</span>
+                  <div className="question-order-buttons">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveQuestion(q.id, 'up')}
+                      disabled={index === 0}
+                      title="Move up"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveQuestion(q.id, 'down')}
+                      disabled={index === selectedQuestions.length - 1}
+                      title="Move down"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="form-group">
           <label>Interviewee Name</label>
