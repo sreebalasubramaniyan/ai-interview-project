@@ -44,10 +44,14 @@ export default function IntervieweeDashboard() {
           setInterview(interviewData);
 
           if (interviewData.questions && interviewData.questions.length > 0) {
-            const questionData = interviewData.questions.map(q => q.question).filter(Boolean);
-            setQuestions(questionData);
-            if (questionData.length > 0) {
-              setQuestion(questionData[0]);
+            // Fetch full question data
+            const questionPromises = interviewData.questions.map(q =>
+              fetch(`http://localhost:5000/api/questions/${q.questionId}`).then(res => res.json())
+            );
+            const questionDataArray = await Promise.all(questionPromises);
+            setQuestions(questionDataArray);
+            if (questionDataArray.length > 0) {
+              setQuestion(questionDataArray[0]);
               setCurrentQuestionIndex(0);
             }
           } else if (interviewData.questionId) {
@@ -66,10 +70,14 @@ export default function IntervieweeDashboard() {
           sessionStorage.setItem('interviewData', JSON.stringify(interviewData));
 
           if (interviewData.questions && interviewData.questions.length > 0) {
-            const questionData = interviewData.questions.map(q => q.question).filter(Boolean);
-            setQuestions(questionData);
-            if (questionData.length > 0) {
-              setQuestion(questionData[0]);
+            // Fetch full question data
+            const questionPromises = interviewData.questions.map(q =>
+              fetch(`http://localhost:5000/api/questions/${q.questionId}`).then(res => res.json())
+            );
+            const questionDataArray = await Promise.all(questionPromises);
+            setQuestions(questionDataArray);
+            if (questionDataArray.length > 0) {
+              setQuestion(questionDataArray[0]);
               setCurrentQuestionIndex(0);
             }
           } else if (interviewData.questionId) {
@@ -92,13 +100,25 @@ export default function IntervieweeDashboard() {
           ? JSON.parse(sessionStorage.getItem('interviewData'))
           : interview;
 
-        if (interviewData?.duration && interviewData?.startedAt) {
-          const startTime = new Date(interviewData.startedAt).getTime();
+        // Calculate time based on scheduledAt and duration (not startedAt)
+        if (interviewData?.scheduledAt && interviewData?.duration) {
+          const scheduledTime = new Date(interviewData.scheduledAt).getTime();
+          const now = new Date().getTime();
           const durationMs = interviewData.duration * 60 * 1000;
-          const endTime = startTime + durationMs;
-          const remaining = endTime - new Date().getTime();
-          setTimeRemaining(remaining);
+          const endTime = scheduledTime + durationMs;
+          const remaining = endTime - now;
+
+          if (remaining > 0) {
+            setTimeRemaining(remaining);
+          } else if (now < scheduledTime) {
+            // Interview hasn't started yet, show wait time
+            setTimeRemaining(null);
+          } else {
+            // Interview has ended
+            setTimeRemaining(0);
+          }
         } else if (interviewData?.duration) {
+          // Fallback: duration from when user starts (shouldn't happen)
           const durationMs = interviewData.duration * 60 * 1000;
           setTimeRemaining(durationMs);
         }
@@ -120,7 +140,7 @@ export default function IntervieweeDashboard() {
       setTimeRemaining(prev => {
         if (prev <= 1000) {
           clearInterval(timerRef.current);
-          handleSubmit(true);
+          // Time's up - just stop, don't submit
           return 0;
         }
         return prev - 1000;
@@ -213,48 +233,40 @@ export default function IntervieweeDashboard() {
     }
   };
 
-  const handleSubmit = async (isAutoSubmit = false) => {
-    if (submitting) return;
-    setSubmitting(true);
+  const handleSubmit = async () => {
+    if (running || !question?._id) return;
+    setRunning(true);
+    setShowOutput(true);
+    setTestResults(null);
+    setOutput(null);
 
     try {
-      const executeResponse = await fetch('http://localhost:5000/api/execute/submit', {
+      const response = await fetch('http://localhost:5000/api/execute/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, language, questionId: question?._id })
-      });
-
-      const executeData = await executeResponse.json();
-
-      const response = await fetch(`${API_URL}/token/${token}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          submittedCode: code,
-          language: language,
-          isAutoSubmit: isAutoSubmit,
-          executionResults: executeData.results || [],
-          testSummary: executeData.summary || null
-        }),
+        body: JSON.stringify({ code, language, questionId: question._id })
       });
 
       const data = await response.json();
       if (response.ok) {
-        sessionStorage.removeItem('interviewData');
-        navigate(`/interview/${token}/complete`, {
-          state: { interview: data.interview, isAutoSubmit: isAutoSubmit, testResults: executeData.summary }
+        setTestResults(data.results);
+        const isAccepted = data.summary?.passed === data.summary?.total;
+        setOutput({
+          summary: data.summary,
+          isAccepted: isAccepted,
+          message: isAccepted ? 'All test cases passed!' : `${data.summary.passed}/${data.summary.total} test cases passed`
         });
       } else {
         setOutput({ error: data.message || 'Failed to submit' });
-        setShowOutput(true);
       }
     } catch (err) {
       setOutput({ error: 'Failed to connect to server' });
-      setShowOutput(true);
     } finally {
-      setSubmitting(false);
+      setRunning(false);
     }
   };
+
+  // Run button - executes first 3 test cases only
 
   const getFileExtension = () => {
     switch (language) {
@@ -294,23 +306,56 @@ export default function IntervieweeDashboard() {
       <header className="coding-header">
         <div className="header-left">
           {questions.length > 1 ? (
-            <select
-              className="question-nav-select"
-              value={currentQuestionIndex}
-              onChange={(e) => {
-                const idx = parseInt(e.target.value);
-                setCurrentQuestionIndex(idx);
-                setQuestion(questions[idx]);
-                setOutput(null);
-                setTestResults(null);
-              }}
-            >
-              {questions.map((q, idx) => (
-                <option key={idx} value={idx}>Question {idx + 1}: {q.title}</option>
-              ))}
-            </select>
+            <div className="question-navigator">
+              <button
+                className="nav-arrow"
+                onClick={() => {
+                  const idx = currentQuestionIndex > 0 ? currentQuestionIndex - 1 : questions.length - 1;
+                  setCurrentQuestionIndex(idx);
+                  setQuestion(questions[idx]);
+                  setOutput(null);
+                  setTestResults(null);
+                }}
+                title="Previous Question"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M9.78 12.78a.75.75 0 01-1.06 0L4.47 8.53a.75.75 0 010-1.06l4.25-4.25a.751.751 0 011.042.018.751.751 0 01.018 1.042L6.06 8l3.72 3.72a.75.75 0 010 1.06z"/>
+                </svg>
+              </button>
+              <select
+                className="question-nav-select"
+                value={currentQuestionIndex}
+                onChange={(e) => {
+                  const idx = parseInt(e.target.value);
+                  setCurrentQuestionIndex(idx);
+                  setQuestion(questions[idx]);
+                  setOutput(null);
+                  setTestResults(null);
+                }}
+              >
+                {questions.map((q, idx) => (
+                  <option key={idx} value={idx}>{idx + 1}. {q?.title || `Question ${idx + 1}`}</option>
+                ))}
+              </select>
+              <span className="question-count">{currentQuestionIndex + 1} / {questions.length}</span>
+              <button
+                className="nav-arrow"
+                onClick={() => {
+                  const idx = currentQuestionIndex < questions.length - 1 ? currentQuestionIndex + 1 : 0;
+                  setCurrentQuestionIndex(idx);
+                  setQuestion(questions[idx]);
+                  setOutput(null);
+                  setTestResults(null);
+                }}
+                title="Next Question"
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.751.751 0 01-1.042-.018.751.751 0 01-.018-1.042L9.94 8 6.22 4.28a.75.75 0 010-1.06z"/>
+                </svg>
+              </button>
+            </div>
           ) : (
-            <span className="interview-title">Problem</span>
+            <span className="interview-title">{question?.title || interview?.questionTitle || 'Problem'}</span>
           )}
         </div>
         <div className="header-center">
@@ -329,8 +374,8 @@ export default function IntervieweeDashboard() {
           <button className="run-btn" onClick={handleRun} disabled={running}>
             {running ? 'Running...' : 'Run'}
           </button>
-          <button className="submit-btn" onClick={() => handleSubmit(false)} disabled={submitting}>
-            {submitting ? 'Submitting...' : 'Submit'}
+          <button className="submit-btn" onClick={handleSubmit} disabled={running}>
+            {running ? 'Submitting...' : 'Submit'}
           </button>
         </div>
       </header>
@@ -340,7 +385,10 @@ export default function IntervieweeDashboard() {
         {/* Left Panel - Question */}
         <section className="question-panel">
           <div className="question-content">
-            <h2 className="question-title">{question?.title || interview?.questionTitle || 'Problem'}</h2>
+            <h2 className="question-title">
+              {questions.length > 1 && (currentQuestionIndex + 1)}.
+              {question?.title || interview?.questionTitle || 'Problem'}
+            </h2>
 
             <h3>Description</h3>
             <p className="question-description">{question?.description || 'No description available'}</p>
@@ -348,7 +396,7 @@ export default function IntervieweeDashboard() {
             {question?.testCases && question.testCases.length > 0 && (
               <div className="examples-section">
                 <h3>Examples</h3>
-                {question.testCases.map((testCase, index) => (
+                {question.testCases.slice(0, 3).map((testCase, index) => (
                   <div key={index} className="example-box">
                     <p><strong>Example {index + 1}:</strong></p>
                     <div className="example-content">
@@ -384,10 +432,6 @@ export default function IntervieweeDashboard() {
           {/* Editor Section */}
           <div className="editor-section" style={{ flex: showOutput ? '1 1 auto' : '1 1 100%' }}>
             <div className="editor-header">
-              <div className="file-tab">
-                <span className="file-icon">📄</span>
-                Solution.{getFileExtension()}
-              </div>
               <div className="editor-actions">
                 <button className={`toggle-btn ${showOutput ? 'active' : ''}`} onClick={() => setShowOutput(!showOutput)}>
                   {showOutput ? '▼ Console' : '▲ Console'}
@@ -447,30 +491,20 @@ export default function IntervieweeDashboard() {
                           </div>
                           <div className="result-row">
                             <span className="result-label">Output:</span>
-                            <code className={result.passed ? 'correct' : 'incorrect'}>{result.actual || 'N/A'}</code>
+                            <code className={result.passed ? 'correct' : 'incorrect'}>
+                              {result.error ? result.error : (result.actual || 'N/A')}
+                            </code>
                           </div>
-                          {result.error && (
-                            <div className="result-row error">
-                              <span className="result-label">Error:</span>
-                              <code>{result.error}</code>
-                            </div>
-                          )}
-                          {result.executionTime !== undefined && (
-                            <div className="result-row">
-                              <span className="result-label">Time:</span>
-                              <code>{result.executionTime} ms</code>
-                            </div>
-                          )}
                         </div>
                       </div>
                     ))}
-                    <div className={`summary-bar ${output.summary.status}`}>
+                    <div className={`summary-bar ${output.summary.status} ${output.isAccepted ? 'accepted' : ''}`}>
                       <span className="summary-icon">
-                        {output.summary.status === 'all_passed' ? '🎉' : output.summary.status === 'partial' ? '⚠️' : '❌'}
+                        {output.isAccepted ? '✅' : output.summary.status === 'partial' ? '⚠️' : '❌'}
                       </span>
                       <span className="summary-text">
-                        {output.summary.status === 'all_passed'
-                          ? 'All test cases passed!'
+                        {output.isAccepted
+                          ? 'Accepted - All test cases passed!'
                           : `${output.summary.passed}/${output.summary.total} test cases passed`}
                       </span>
                     </div>

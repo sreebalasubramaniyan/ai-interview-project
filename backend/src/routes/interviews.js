@@ -274,17 +274,26 @@ router.post('/token/:token/submit', async (req, res) => {
     }
 
     // Handle per-question submission
-    if (questionIndex !== undefined && interview.questions && interview.questions.length > 0) {
+    const hasMultipleQuestions = interview.questions && interview.questions.length > 0;
+    const isValidQuestionIndex = questionIndex !== undefined && questionIndex !== null && typeof questionIndex === 'number';
+
+    console.log('Submit - questionIndex:', questionIndex, 'hasMultipleQuestions:', hasMultipleQuestions);
+
+    if (hasMultipleQuestions && isValidQuestionIndex && interview.questions[questionIndex]) {
       // Update or add question result
       const existingIndex = interview.questionResults.findIndex(
         qr => qr.questionId.toString() === interview.questions[questionIndex]?.questionId.toString()
       );
 
+      // Check if all test cases passed (accepted)
+      const isAccepted = testSummary?.passed === testSummary?.total;
+
       const questionResult = {
         questionId: interview.questions[questionIndex].questionId,
+        questionTitle: interview.questions[questionIndex].question?.title || 'Question',
         submittedCode: submittedCode || '',
         language: language || 'javascript',
-        status: testSummary?.passed === testSummary?.total ? 'passed' : 'failed',
+        status: isAccepted ? 'passed' : 'failed',
         executionResults: executionResults || results?.testResults || [],
         testSummary: testSummary || null
       };
@@ -295,37 +304,31 @@ router.post('/token/:token/submit', async (req, res) => {
         interview.questionResults.push(questionResult);
       }
 
-      // Check if all questions are answered
-      const answeredCount = interview.questionResults.length;
-      const totalQuestions = interview.questions.length;
-
-      // If all questions answered, mark as completed
-      if (answeredCount >= totalQuestions) {
-        interview.status = 'completed';
-        interview.completedAt = new Date();
-      }
+      // DO NOT mark interview as completed - user submits questions one by one
+      // Interview stays in-progress until manually completed by admin
+      console.log('Question submitted - accepted:', isAccepted);
     } else {
-      // Legacy single question submission
-      interview.status = 'completed';
-      interview.completedAt = new Date();
+      // Legacy single question submission - just save the result, don't complete
       interview.result = {
         submittedCode: submittedCode || '',
         language: language || 'javascript',
-        status: 'pending',
+        status: testSummary?.passed === testSummary?.total ? 'passed' : 'failed',
         executionTime: 0
       };
+      // Also save to questionResults for consistency
+      const questionResult = {
+        questionId: interview.questionId,
+        questionTitle: interview.questionTitle || 'Question',
+        submittedCode: submittedCode || '',
+        language: language || 'javascript',
+        status: testSummary?.passed === testSummary?.total ? 'passed' : 'failed',
+        executionResults: executionResults || [],
+        testSummary: testSummary || null
+      };
+      interview.questionResults = [questionResult];
     }
 
     const updatedInterview = await interview.save();
-
-    // Send results to admin when interview is completed
-    if (interview.status === 'completed') {
-      try {
-        await sendResultsToAdmin(updatedInterview);
-      } catch (emailError) {
-        console.error('Failed to send results email:', emailError.message);
-      }
-    }
 
     res.json({
       success: true,

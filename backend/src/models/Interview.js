@@ -97,11 +97,21 @@ const interviewSchema = new mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Question'
     },
+    questionTitle: String,
     submittedCode: String,
     language: String,
     status: {
       type: String,
       enum: ['passed', 'failed', 'pending']
+    },
+    testSummary: {
+      passed: Number,
+      total: Number,
+      status: String,
+      samplePassed: Number,
+      sampleTotal: Number,
+      hiddenPassed: Number,
+      hiddenTotal: Number
     },
     executionResults: [{
       testCase: {
