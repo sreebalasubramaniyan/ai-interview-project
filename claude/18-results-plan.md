@@ -32,8 +32,17 @@ Question Navigator ▼
 3. Merge Arrays
 ```
 
-### 2. Auto-submit on Time End
-When timer reaches 0, automatically submit the current code
+### 2. Auto-submit & Complete on Time End
+When timer reaches 0:
+1. Automatically submit the current code
+2. Mark interview as completed in database
+3. Set completion type = 'time_up'
+
+### 3. Admin Portal - Interview Status
+- Interview status automatically changes from "in-progress" to "completed" when:
+  - Time expires (auto)
+  - Interviewee clicks "Finish" button (manual)
+- Admin can view results only for completed interviews
 
 ### 3. Finish Interview Button
 - Add "Finish Interview" button in interviewee dashboard
@@ -179,17 +188,10 @@ Show:
                             ▼
               [Dropdown when clicked]
               ┌────────────────────┐
-              │ 1. Two Sum ✓      │  ← Green badge
-              │ 2. Reverse ✗      │  ← Red badge
-              │ 3. Merge -        │  ← Gray badge
+              │ 1. Two Sum [Accepted - green]   │
+              │ 2. Reverse List [Attempted - red]│
+              │ 3. Merge Arrays                  │
               └────────────────────┘
-```
-
-### Status Badges (Codeforces style)
-```
-● ✓ - Green (all passed)
-● ✗ - Red (attempted but not all passed)
-● -  - Gray (not attempted)
 ```
 
 ### Admin Results View
@@ -203,13 +205,13 @@ Show:
 │                                                         │
 │ Question 1: Two Sum                                    │
 │ ─────────────────────────────────────────────────────── │
-│ Best Score: 5/5 ✓  |  Submits: 3                     │
+│ Best Score: 5/5  |  Submits: 3                         │
 │                                                         │
 │ [View Code]                                             │
 │                                                         │
 │ Question 2: Reverse Linked List                         │
 │ ─────────────────────────────────────────────────────── │
-│ Best Score: 3/5 ✗  |  Submits: 2                      │
+│ Best Score: 3/5  |  Submits: 2                      │
 │                                                         │
 │ [View Code]                                             │
 │                                                         │

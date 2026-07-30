@@ -33,6 +33,27 @@
   background: #2563eb;
 }
 
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.refresh-btn {
+  padding: 10px 16px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
 .empty-state {
   text-align: center;
   padding: 60px 20px;
@@ -112,6 +133,11 @@
   color: #16a34a;
 }
 
+.status-badge.in-progress {
+  background: #fef3c7;
+  color: #d97706;
+}
+
 .status-badge.expired {
   background: #fee2e2;
   color: #dc2626;
@@ -141,4 +167,216 @@
 .delete-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Results Button */
+.results-btn {
+  padding: 6px 12px;
+  background: #dcfce7;
+  color: #16a34a;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.results-btn:hover {
+  background: #bbf7d0;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.25rem;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: #1e293b;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.result-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.result-item .label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.result-item .value {
+  color: #1e293b;
+  font-weight: 500;
+}
+
+.result-item .value.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.modal-body h4 {
+  margin: 0 0 16px 0;
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.question-results {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.question-result-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.question-result-card.accepted {
+  border-left: 4px solid #16a34a;
+}
+
+.question-result-card.partial {
+  border-left: 4px solid #d97706;
+}
+
+.question-result-card.not-attempted {
+  border-left: 4px solid #94a3b8;
+  background: #f8fafc;
+}
+
+.question-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.question-result-header .question-title {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.score-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.score-badge.accepted {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.score-badge.partial {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.score-badge.not-attempted {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.question-result-details {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.submission-code {
+  margin-top: 12px;
+}
+
+.submission-code details summary {
+  cursor: pointer;
+  color: #3b82f6;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.submission-code details[open] summary {
+  margin-bottom: 8px;
+}
+
+.submission-code pre {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  overflow-x: auto;
+  max-height: 200px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.no-results {
+  text-align: center;
+  color: #64748b;
+  padding: 20px;
 }

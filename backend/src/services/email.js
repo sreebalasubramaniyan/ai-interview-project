@@ -2,6 +2,12 @@ const sgMail = require('@sendgrid/mail');
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
+// Debug: Log email config on startup
+console.log('Email config loaded:');
+console.log('- SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? 'Set' : 'NOT SET');
+console.log('- EMAIL_USER:', process.env.EMAIL_USER);
+console.log('- ADMIN_EMAIL:', process.env.ADMIN_EMAIL);
+
 // Send interview invitation email
 const sendInterviewInvitation = async (interview) => {
   const interviewLink = `${process.env.FRONTEND_URL}/interview/${interview.accessToken}`;
@@ -13,6 +19,9 @@ const sendInterviewInvitation = async (interview) => {
     hour: '2-digit',
     minute: '2-digit'
   });
+
+  console.log('Sending invitation email to:', interview.intervieweeEmail);
+  console.log('From:', process.env.EMAIL_USER);
 
   const msg = {
     to: interview.intervieweeEmail,
@@ -74,10 +83,32 @@ const sendInterviewInvitation = async (interview) => {
 
 // Send interview results email to admin
 const sendResultsToAdmin = async (interview) => {
+  // Build results HTML for multiple questions
+  let resultsHtml = '';
+
+  if (interview.bestScores && interview.bestScores.length > 0) {
+    resultsHtml = interview.bestScores.map(bs => `
+      <div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
+        <p style="margin: 0 0 8px 0;"><strong>${bs.questionTitle}</strong></p>
+        <p style="margin: 0; color: ${bs.passed === bs.total ? '#10b981' : '#d97706'};">
+          Best Score: ${bs.passed}/${bs.total}
+          ${bs.passed === bs.total ? '✅' : '⚠️'}
+        </p>
+      </div>
+    `).join('');
+  } else {
+    // Legacy single question format
+    resultsHtml = `
+      <p><strong>Question:</strong> ${interview.questionTitle || 'N/A'}</p>
+      <p><strong>Language:</strong> ${interview.result?.language || 'N/A'}</p>
+      <p><strong>Status:</strong> <span style="color: ${interview.result?.status === 'passed' ? '#10b981' : '#dc2626'}; font-weight: bold;">${interview.result?.status || 'pending'}</span></p>
+    `;
+  }
+
   const msg = {
     to: process.env.ADMIN_EMAIL || 'admin@aiinterview.com',
     from: process.env.EMAIL_USER || 'noreply@aiinterview.com',
-    subject: `Interview Completed: ${interview.intervieweeName} - ${interview.questionTitle}`,
+    subject: `Interview Completed: ${interview.intervieweeName} - ${interview.questions?.length > 0 ? `${interview.questions.length} Questions` : interview.questionTitle}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #10b981;">Interview Completed</h2>
@@ -85,9 +116,10 @@ const sendResultsToAdmin = async (interview) => {
         <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <p><strong>Interviewee:</strong> ${interview.intervieweeName}</p>
           <p><strong>Email:</strong> ${interview.intervieweeEmail}</p>
-          <p><strong>Question:</strong> ${interview.questionTitle}</p>
-          <p><strong>Language:</strong> ${interview.result?.language || 'N/A'}</p>
-          <p><strong>Status:</strong> <span style="color: ${interview.result?.status === 'passed' ? '#10b981' : '#dc2626'}; font-weight: bold;">${interview.result?.status || 'pending'}</span></p>
+          <p><strong>Completed:</strong> ${interview.completedAt ? new Date(interview.completedAt).toLocaleString() : 'N/A'}</p>
+          <p><strong>Completion Type:</strong> ${interview.completionType || 'manual'}</p>
+          <hr style="margin: 16px 0; border: none; border-top: 1px solid #e5e7eb;" />
+          ${resultsHtml}
         </div>
 
         <p>Log in to the admin dashboard to view the full submission and code.</p>

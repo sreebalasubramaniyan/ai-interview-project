@@ -46,7 +46,7 @@ const interviewSchema = new mongoose.Schema({
   duration: {
     type: Number,
     required: true,
-    min: 15,
+    min: 1,
     max: 180
   },
   status: {
@@ -139,7 +139,47 @@ const interviewSchema = new mongoose.Schema({
         executionTime: Number
       }
     }
-  ]
+  ],
+
+  // Best scores per question (max test cases passed across all submissions)
+  bestScores: [{
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Question'
+    },
+    questionTitle: String,
+    passed: Number,
+    total: Number
+  }],
+
+  // Track all submissions
+  allSubmissions: [{
+    questionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Question'
+    },
+    questionTitle: String,
+    submittedCode: String,
+    language: String,
+    passed: Number,
+    total: Number,
+    submittedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+
+  // Interview completion
+  isCompleted: {
+    type: Boolean,
+    default: false
+  },
+  completedAt: Date,
+  completionType: {
+    type: String,
+    enum: ['time_up', 'manual', null],
+    default: null
+  }
 }, {
   timestamps: true
 });

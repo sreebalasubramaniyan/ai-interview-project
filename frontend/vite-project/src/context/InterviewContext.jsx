@@ -8,9 +8,16 @@ export function InterviewProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch all interviews on mount
+  // Fetch all interviews on mount and set up polling for updates
   useEffect(() => {
     fetchInterviews();
+
+    // Poll for updates every 10 seconds to catch interview completions
+    const interval = setInterval(() => {
+      fetchInterviews();
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchInterviews = async () => {

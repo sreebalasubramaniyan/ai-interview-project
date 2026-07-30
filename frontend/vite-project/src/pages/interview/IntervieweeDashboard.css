@@ -139,6 +139,7 @@ html, body, #root {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 16px;
 }
 
 .timer {
@@ -231,9 +232,74 @@ html, body, #root {
   transform: translateY(-1px);
 }
 
-.run-btn:disabled, .submit-btn:disabled {
+.run-btn:disabled, .submit-btn:disabled, .finish-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* Finish Interview Button */
+.finish-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.finish-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+  box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Question Status Badges */
+.question-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.question-status-badge.accepted {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--ide-accent-green);
+}
+
+.question-status-badge.attempted {
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--ide-accent-red);
+}
+
+/* Status Tag - Codeforces style */
+.status-tag {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 12px;
+}
+
+.status-tag.accepted {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--ide-accent-green);
+  border: 1px solid var(--ide-accent-green);
+}
+
+.status-tag.attempted {
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--ide-accent-red);
+  border: 1px solid var(--ide-accent-red);
 }
 
 /* ===== Main Layout ===== */

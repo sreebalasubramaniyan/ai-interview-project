@@ -67,6 +67,56 @@
   color: #00b8a3;
 }
 
+.completion-results {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+
+.completion-results h3 {
+  color: #fff;
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.completion-results .result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.completion-results .result-row.accepted {
+  background: rgba(0, 184, 163, 0.15);
+  border: 1px solid #00b8a3;
+}
+
+.completion-results .result-row.partial {
+  background: rgba(255, 170, 22, 0.15);
+  border: 1px solid #ffaa16;
+}
+
+.completion-results .result-title {
+  color: #fff;
+  font-weight: 500;
+}
+
+.completion-results .result-score {
+  font-weight: 600;
+}
+
+.completion-results .result-row.accepted .result-score {
+  color: #00b8a3;
+}
+
+.completion-results .result-row.partial .result-score {
+  color: #ffaa16;
+}
+
 .completion-note {
   background: #2d2d2d;
   border-radius: 8px;

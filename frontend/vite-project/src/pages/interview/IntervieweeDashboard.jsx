@@ -21,6 +21,9 @@ export default function IntervieweeDashboard() {
   const [showOutput, setShowOutput] = useState(true);
   const [output, setOutput] = useState(null);
   const [testResults, setTestResults] = useState(null);
+  const [questionStatuses, setQuestionStatuses] = useState({}); // { questionIndex: 'accepted' | 'attempted' | 'not_attempted' }
+  const [bestScores, setBestScores] = useState({}); // { questionIndex: { passed, total } }
+  const [interviewCompleted, setInterviewCompleted] = useState(false);
 
   // Resizable console panel
   const [consoleHeight, setConsoleHeight] = useState(200);
@@ -44,10 +47,15 @@ export default function IntervieweeDashboard() {
           setInterview(interviewData);
 
           if (interviewData.questions && interviewData.questions.length > 0) {
-            // Fetch full question data
-            const questionPromises = interviewData.questions.map(q =>
-              fetch(`http://localhost:5000/api/questions/${q.questionId}`).then(res => res.json())
-            );
+            // Fetch full question data - handle both populated and non-populated questionId
+            const questionPromises = interviewData.questions.map(q => {
+              // If questionId is already an object with _id, use it directly
+              if (typeof q.questionId === 'object' && q.questionId?._id) {
+                return Promise.resolve(q.questionId);
+              }
+              // Otherwise fetch by ID
+              return fetch(`http://localhost:5000/api/questions/${q.questionId}`).then(res => res.json());
+            });
             const questionDataArray = await Promise.all(questionPromises);
             setQuestions(questionDataArray);
             if (questionDataArray.length > 0) {
@@ -55,8 +63,11 @@ export default function IntervieweeDashboard() {
               setCurrentQuestionIndex(0);
             }
           } else if (interviewData.questionId) {
+            const questionId = typeof interviewData.questionId === 'object'
+              ? interviewData.questionId._id
+              : interviewData.questionId;
             const questionResponse = await fetch(
-              `http://localhost:5000/api/questions/${interviewData.questionId}`
+              `http://localhost:5000/api/questions/${questionId}`
             );
             if (questionResponse.ok) {
               const questionData = await questionResponse.json();
@@ -70,10 +81,15 @@ export default function IntervieweeDashboard() {
           sessionStorage.setItem('interviewData', JSON.stringify(interviewData));
 
           if (interviewData.questions && interviewData.questions.length > 0) {
-            // Fetch full question data
-            const questionPromises = interviewData.questions.map(q =>
-              fetch(`http://localhost:5000/api/questions/${q.questionId}`).then(res => res.json())
-            );
+            // Fetch full question data - handle both populated and non-populated questionId
+            const questionPromises = interviewData.questions.map(q => {
+              // If questionId is already an object with _id, use it directly
+              if (typeof q.questionId === 'object' && q.questionId?._id) {
+                return Promise.resolve(q.questionId);
+              }
+              // Otherwise fetch by ID
+              return fetch(`http://localhost:5000/api/questions/${q.questionId}`).then(res => res.json());
+            });
             const questionDataArray = await Promise.all(questionPromises);
             setQuestions(questionDataArray);
             if (questionDataArray.length > 0) {
@@ -81,8 +97,11 @@ export default function IntervieweeDashboard() {
               setCurrentQuestionIndex(0);
             }
           } else if (interviewData.questionId) {
+            const questionId = typeof interviewData.questionId === 'object'
+              ? interviewData.questionId._id
+              : interviewData.questionId;
             const questionResponse = await fetch(
-              `http://localhost:5000/api/questions/${interviewData.questionId}`
+              `http://localhost:5000/api/questions/${questionId}`
             );
             if (questionResponse.ok) {
               const questionData = await questionResponse.json();
@@ -132,6 +151,66 @@ export default function IntervieweeDashboard() {
     fetchData();
   }, [token, navigate]);
 
+  // Auto-finish interview when time runs out
+  const handleAutoFinish = useCallback(async () => {
+    if (interviewCompleted || !question?._id) return;
+
+    console.log('Time is up! Auto-submitting...');
+
+    try {
+      // Try to submit current code
+      let testSummary = null;
+      let executionResults = [];
+
+      try {
+        const execResponse = await fetch('http://localhost:5000/api/execute/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, language, questionId: getCurrentQuestionId() })
+        });
+
+        if (execResponse.ok) {
+          const execData = await execResponse.json();
+          testSummary = execData.summary;
+          executionResults = execData.results || [];
+
+          if (testSummary) {
+            updateQuestionStatus(currentQuestionIndex, testSummary.passed, testSummary.total);
+          }
+        }
+      } catch (e) {
+        console.error('Auto-submit execution failed:', e);
+      }
+
+      // Finish the interview
+      const finishResponse = await fetch(`${API_URL}/token/${token}/finish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submittedCode: code,
+          language,
+          questionIndex: currentQuestionIndex,
+          testSummary: testSummary,
+          executionResults: executionResults,
+          completionType: 'time_up'
+        })
+      });
+
+      const finishData = await finishResponse.json();
+
+      if (finishResponse.ok) {
+        setInterviewCompleted(true);
+        setInterview(finishData.interview);
+        // Navigate directly to completion screen
+        navigate(`/interview/${token}/complete`, {
+          state: { interview: finishData.interview, isAutoSubmit: true }
+        });
+      }
+    } catch (err) {
+      console.error('Auto-finish failed:', err);
+    }
+  }, [token, code, language, question, currentQuestionIndex, interviewCompleted, navigate]);
+
   // Countdown timer
   useEffect(() => {
     if (timeRemaining === null) return;
@@ -140,7 +219,8 @@ export default function IntervieweeDashboard() {
       setTimeRemaining(prev => {
         if (prev <= 1000) {
           clearInterval(timerRef.current);
-          // Time's up - just stop, don't submit
+          // Time's up - auto-submit and finish interview
+          handleAutoFinish();
           return 0;
         }
         return prev - 1000;
@@ -152,7 +232,7 @@ export default function IntervieweeDashboard() {
         clearInterval(timerRef.current);
       }
     };
-  }, [timeRemaining]);
+  }, [timeRemaining, handleAutoFinish]);
 
   const formatTime = (ms) => {
     if (ms <= 0) return '00:00';
@@ -163,6 +243,19 @@ export default function IntervieweeDashboard() {
   };
 
   const isTimeLow = timeRemaining !== null && timeRemaining < 5 * 60 * 1000;
+
+  // Update question status based on submission results
+  const updateQuestionStatus = useCallback((questionIndex, passed, total) => {
+    const isAccepted = passed === total && total > 0;
+    setQuestionStatuses(prev => ({
+      ...prev,
+      [questionIndex]: isAccepted ? 'accepted' : 'attempted'
+    }));
+    setBestScores(prev => ({
+      ...prev,
+      [questionIndex]: { passed, total }
+    }));
+  }, []);
 
   // Handle console resize
   const handleMouseDown = useCallback((e) => {
@@ -206,7 +299,8 @@ export default function IntervieweeDashboard() {
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const handleRun = async () => {
-    if (running || !question?._id) return;
+    const questionId = getCurrentQuestionId();
+    if (running || !questionId) return;
     setRunning(true);
     setShowOutput(true);
     setTestResults(null);
@@ -216,7 +310,7 @@ export default function IntervieweeDashboard() {
       const response = await fetch('http://localhost:5000/api/execute/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, language, questionId: question._id })
+        body: JSON.stringify({ code, language, questionId })
       });
 
       const data = await response.json();
@@ -234,7 +328,8 @@ export default function IntervieweeDashboard() {
   };
 
   const handleSubmit = async () => {
-    if (running || !question?._id) return;
+    const questionId = getCurrentQuestionId();
+    if (running || !questionId) return;
     setRunning(true);
     setShowOutput(true);
     setTestResults(null);
@@ -244,7 +339,7 @@ export default function IntervieweeDashboard() {
       const response = await fetch('http://localhost:5000/api/execute/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, language, questionId: question._id })
+        body: JSON.stringify({ code, language, questionId: getCurrentQuestionId() })
       });
 
       const data = await response.json();
@@ -256,6 +351,28 @@ export default function IntervieweeDashboard() {
           isAccepted: isAccepted,
           message: isAccepted ? 'All test cases passed!' : `${data.summary.passed}/${data.summary.total} test cases passed`
         });
+
+        // Update question status after submission
+        if (data.summary) {
+          updateQuestionStatus(currentQuestionIndex, data.summary.passed, data.summary.total);
+        }
+
+        // Also save to backend with questionIndex
+        try {
+          await fetch(`${API_URL}/token/${encodeURIComponent(token)}/submit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              submittedCode: code,
+              language,
+              questionIndex: currentQuestionIndex,
+              testSummary: data.summary,
+              executionResults: data.results
+            })
+          });
+        } catch (saveErr) {
+          console.error('Failed to save submission:', saveErr);
+        }
       } else {
         setOutput({ error: data.message || 'Failed to submit' });
       }
@@ -264,6 +381,104 @@ export default function IntervieweeDashboard() {
     } finally {
       setRunning(false);
     }
+  };
+
+  // Handle finish interview - submit current code and complete interview
+  const handleFinishInterview = async () => {
+    if (interviewCompleted || running) return;
+
+    // Validate that we have question data
+    if (!getCurrentQuestionId()) {
+      alert('Error: No question loaded. Please refresh the page and try again.');
+      return;
+    }
+
+    const confirmed = window.confirm('Are you sure you want to finish the interview? This will submit your current code and end the interview.');
+    if (!confirmed) return;
+
+    setRunning(true);
+
+    try {
+      console.log('Starting finish process...');
+      console.log('Question ID:', getCurrentQuestionId());
+      console.log('Token:', token);
+
+      // First try to submit current code to get results
+      let testSummary = null;
+      let executionResults = [];
+
+      try {
+        const execResponse = await fetch('http://localhost:5000/api/execute/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, language, questionId: getCurrentQuestionId() })
+        });
+
+        if (execResponse.ok) {
+          const execData = await execResponse.json();
+          testSummary = execData.summary;
+          executionResults = execData.results || [];
+          console.log('Execution results:', testSummary);
+
+          // Update question status
+          if (testSummary) {
+            updateQuestionStatus(currentQuestionIndex, testSummary.passed, testSummary.total);
+          }
+        } else {
+          console.warn('Execution failed, continuing with empty results:', execResponse.status);
+        }
+      } catch (execError) {
+        console.warn('Execution error (continuing anyway):', execError.message);
+      }
+
+      console.log('Calling finish endpoint...');
+
+      // Now finish the interview
+      const finishResponse = await fetch(`${API_URL}/token/${encodeURIComponent(token)}/finish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submittedCode: code,
+          language,
+          questionIndex: currentQuestionIndex,
+          testSummary: testSummary,
+          executionResults: executionResults,
+          completionType: 'manual'
+        })
+      });
+
+      console.log('Finish response status:', finishResponse.status);
+
+      if (!finishResponse.ok) {
+        const errorData = await finishResponse.json();
+        console.error('Finish error:', errorData);
+        alert(errorData.message || 'Failed to complete interview');
+        setRunning(false);
+        return;
+      }
+
+      const finishData = await finishResponse.json();
+      console.log('Finish success:', finishData);
+
+      setInterviewCompleted(true);
+      setInterview(finishData.interview);
+      // Navigate to completion page
+      navigate(`/interview/${token}/complete`, {
+        state: { interview: finishData.interview, isAutoSubmit: false }
+      });
+    } catch (err) {
+      console.error('Error finishing interview:', err);
+      alert('Failed to complete interview: ' + err.message);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  // Helper to get current question ID safely
+  const getCurrentQuestionId = () => {
+    if (!question) return null;
+    // Handle both _id and id fields
+    return question._id || question.id;
   };
 
   // Run button - executes first 3 test cases only
@@ -306,54 +521,70 @@ export default function IntervieweeDashboard() {
       <header className="coding-header">
         <div className="header-left">
           {questions.length > 1 ? (
-            <div className="question-navigator">
-              <button
-                className="nav-arrow"
-                onClick={() => {
-                  const idx = currentQuestionIndex > 0 ? currentQuestionIndex - 1 : questions.length - 1;
-                  setCurrentQuestionIndex(idx);
-                  setQuestion(questions[idx]);
-                  setOutput(null);
-                  setTestResults(null);
-                }}
-                title="Previous Question"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M9.78 12.78a.75.75 0 01-1.06 0L4.47 8.53a.75.75 0 010-1.06l4.25-4.25a.751.751 0 011.042.018.751.751 0 01.018 1.042L6.06 8l3.72 3.72a.75.75 0 010 1.06z"/>
-                </svg>
-              </button>
-              <select
-                className="question-nav-select"
-                value={currentQuestionIndex}
-                onChange={(e) => {
-                  const idx = parseInt(e.target.value);
-                  setCurrentQuestionIndex(idx);
-                  setQuestion(questions[idx]);
-                  setOutput(null);
-                  setTestResults(null);
-                }}
-              >
-                {questions.map((q, idx) => (
-                  <option key={idx} value={idx}>{idx + 1}. {q?.title || `Question ${idx + 1}`}</option>
-                ))}
-              </select>
-              <span className="question-count">{currentQuestionIndex + 1} / {questions.length}</span>
-              <button
-                className="nav-arrow"
-                onClick={() => {
-                  const idx = currentQuestionIndex < questions.length - 1 ? currentQuestionIndex + 1 : 0;
-                  setCurrentQuestionIndex(idx);
-                  setQuestion(questions[idx]);
-                  setOutput(null);
-                  setTestResults(null);
-                }}
-                title="Next Question"
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                  <path d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.751.751 0 01-1.042-.018.751.751 0 01-.018-1.042L9.94 8 6.22 4.28a.75.75 0 010-1.06z"/>
-                </svg>
-              </button>
-            </div>
+            <>
+              <div className="question-navigator">
+                <button
+                  className="nav-arrow"
+                  onClick={() => {
+                    const idx = currentQuestionIndex > 0 ? currentQuestionIndex - 1 : questions.length - 1;
+                    setCurrentQuestionIndex(idx);
+                    setQuestion(questions[idx]);
+                    setOutput(null);
+                    setTestResults(null);
+                  }}
+                  title="Previous Question"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M9.78 12.78a.75.75 0 01-1.06 0L4.47 8.53a.75.75 0 010-1.06l4.25-4.25a.751.751 0 011.042.018.751.751 0 01.018 1.042L6.06 8l3.72 3.72a.75.75 0 010 1.06z"/>
+                  </svg>
+                </button>
+                <select
+                  className="question-nav-select"
+                  value={currentQuestionIndex}
+                  onChange={(e) => {
+                    const idx = parseInt(e.target.value);
+                    setCurrentQuestionIndex(idx);
+                    setQuestion(questions[idx]);
+                    setOutput(null);
+                    setTestResults(null);
+                  }}
+                >
+                  {questions.map((q, idx) => {
+                    const status = questionStatuses[idx];
+                    const bestScore = bestScores[idx];
+                    return (
+                      <option key={idx} value={idx}>
+                        {idx + 1}. {q?.title || `Question ${idx + 1}`}
+                        {status === 'accepted' && ' ✓'}
+                        {status === 'attempted' && ` (${bestScore?.passed || 0}/${bestScore?.total || 0})`}
+                      </option>
+                    );
+                  })}
+                </select>
+                <span className="question-count">{currentQuestionIndex + 1} / {questions.length}</span>
+                <button
+                  className="nav-arrow"
+                  onClick={() => {
+                    const idx = currentQuestionIndex < questions.length - 1 ? currentQuestionIndex + 1 : 0;
+                    setCurrentQuestionIndex(idx);
+                    setQuestion(questions[idx]);
+                    setOutput(null);
+                    setTestResults(null);
+                  }}
+                  title="Next Question"
+                >
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M6.22 3.22a.75.75 0 011.06 0l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.751.751 0 01-1.042-.018.751.751 0 01-.018-1.042L9.94 8 6.22 4.28a.75.75 0 010-1.06z"/>
+                  </svg>
+                </button>
+              </div>
+              {/* Status tag - outside navigator, Codeforces style */}
+              {questionStatuses[currentQuestionIndex] && (
+                <span className={`status-tag ${questionStatuses[currentQuestionIndex]}`}>
+                  {questionStatuses[currentQuestionIndex] === 'accepted' ? 'Accepted' : 'Attempted'}
+                </span>
+              )}
+            </>
           ) : (
             <span className="interview-title">{question?.title || interview?.questionTitle || 'Problem'}</span>
           )}

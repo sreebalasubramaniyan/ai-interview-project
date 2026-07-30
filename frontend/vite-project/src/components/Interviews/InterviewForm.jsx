@@ -179,7 +179,7 @@ export default function InterviewForm() {
             name="duration"
             value={formData.duration}
             onChange={handleChange}
-            min="15"
+            min="1"
             max="180"
             required
           />

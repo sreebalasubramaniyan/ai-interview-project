@@ -28,6 +28,23 @@ export default function CompletionScreen() {
     };
   }, []);
 
+  // Get results to display
+  const getResults = () => {
+    if (interview?.bestScores && interview.bestScores.length > 0) {
+      return interview.bestScores;
+    }
+    if (interview?.questionResults && interview.questionResults.length > 0) {
+      return interview.questionResults.map(qr => ({
+        questionTitle: qr.questionTitle,
+        passed: qr.testSummary?.passed || 0,
+        total: qr.testSummary?.total || 0
+      }));
+    }
+    return [];
+  };
+
+  const results = getResults();
+
   return (
     <div className="completion-screen">
       <div className="completion-card">
@@ -46,20 +63,25 @@ export default function CompletionScreen() {
           }
         </p>
 
-        <div className="completion-details">
-          <div className="detail-row">
-            <span className="detail-label">Question:</span>
-            <span className="detail-value">{interview?.questionTitle || 'N/A'}</span>
+        {/* Show results summary */}
+        {results.length > 0 && (
+          <div className="completion-results">
+            <h3>Your Results</h3>
+            {results.map((result, idx) => {
+              const passed = result.passed || 0;
+              const total = result.total || 0;
+              const isAccepted = passed === total && total > 0;
+              return (
+                <div key={idx} className={`result-row ${isAccepted ? 'accepted' : 'partial'}`}>
+                  <span className="result-title">{result.questionTitle || `Question ${idx + 1}`}</span>
+                  <span className="result-score">
+                    {isAccepted ? '✓ Accepted' : `${passed}/${total}`}
+                  </span>
+                </div>
+              );
+            })}
           </div>
-          <div className="detail-row">
-            <span className="detail-label">Language:</span>
-            <span className="detail-value">{interview?.language || interview?.result?.language || 'Not selected'}</span>
-          </div>
-          <div className="detail-row">
-            <span className="detail-label">Status:</span>
-            <span className="detail-value status-completed">Completed</span>
-          </div>
-        </div>
+        )}
 
         <div className="completion-note">
           <p>📧 The results have been sent to the admin.</p>

@@ -99,7 +99,7 @@ export default function IntervieweeLogin() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, secretCode }),
+        body: JSON.stringify({ intervieweeEmail: email, secretCode }),
       });
 
       const data = await response.json();
