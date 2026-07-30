@@ -73,16 +73,6 @@ ADMIN_EMAIL=admin@example.com
 - `POST /api/execute/run` — Run against first 3 test cases
 - `POST /api/execute/submit` — Run against all test cases
 
-## Interview Flow
-
-1. Admin creates questions with test cases
-2. Admin schedules interview with candidate details
-3. Candidate receives email with unique link + secret code
-4. Candidate enters email + secret code to access interview
-5. Candidate writes and submits code for each question
-6. System executes code and shows results
-7. Admin receives results via email
-
 ## Project Structure
 
 ```

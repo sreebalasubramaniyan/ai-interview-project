@@ -4,6 +4,7 @@ import { QuestionProvider } from './context/QuestionContext';
 import { InterviewProvider } from './context/InterviewContext';
 
 // Pages
+import Home from './pages/Home';
 import Login from './pages/admin/Login';
 import Dashboard from './pages/admin/Dashboard';
 import QuestionsPage from './pages/admin/QuestionsPage';
@@ -25,6 +26,7 @@ function App() {
         <QuestionProvider>
           <InterviewProvider>
             <Routes>
+              <Route path="/" element={<Home />} />
               <Route path="/admin/login" element={<Login />} />
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Dashboard />} />
