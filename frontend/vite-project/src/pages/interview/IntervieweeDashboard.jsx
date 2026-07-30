@@ -1,9 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import CodeEditor from '../../components/interview/CodeEditor';
+import { API_URL } from '../../config';
 import './IntervieweeDashboard.css';
-
-const API_URL = 'http://localhost:5000/api/interviews';
 
 export default function IntervieweeDashboard() {
   const { token } = useParams();
@@ -54,7 +53,7 @@ export default function IntervieweeDashboard() {
                 return Promise.resolve(q.questionId);
               }
               // Otherwise fetch by ID
-              return fetch(`http://localhost:5000/api/questions/${q.questionId}`).then(res => res.json());
+              return fetch(`${API_URL.QUESTIONS}/${q.questionId}`).then(res => res.json());
             });
             const questionDataArray = await Promise.all(questionPromises);
             setQuestions(questionDataArray);
@@ -67,7 +66,7 @@ export default function IntervieweeDashboard() {
               ? interviewData.questionId._id
               : interviewData.questionId;
             const questionResponse = await fetch(
-              `http://localhost:5000/api/questions/${questionId}`
+              `${API_URL.QUESTIONS}/${questionId}`
             );
             if (questionResponse.ok) {
               const questionData = await questionResponse.json();
@@ -88,7 +87,7 @@ export default function IntervieweeDashboard() {
                 return Promise.resolve(q.questionId);
               }
               // Otherwise fetch by ID
-              return fetch(`http://localhost:5000/api/questions/${q.questionId}`).then(res => res.json());
+              return fetch(`${API_URL.QUESTIONS}/${q.questionId}`).then(res => res.json());
             });
             const questionDataArray = await Promise.all(questionPromises);
             setQuestions(questionDataArray);
@@ -101,7 +100,7 @@ export default function IntervieweeDashboard() {
               ? interviewData.questionId._id
               : interviewData.questionId;
             const questionResponse = await fetch(
-              `http://localhost:5000/api/questions/${questionId}`
+              `${API_URL.QUESTIONS}/${questionId}`
             );
             if (questionResponse.ok) {
               const questionData = await questionResponse.json();
@@ -163,7 +162,7 @@ export default function IntervieweeDashboard() {
       let executionResults = [];
 
       try {
-        const execResponse = await fetch('http://localhost:5000/api/execute/submit', {
+        const execResponse = await fetch(`${API_URL.EXECUTE}/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, language, questionId: getCurrentQuestionId() })
@@ -307,7 +306,7 @@ export default function IntervieweeDashboard() {
     setOutput(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/execute/run', {
+      const response = await fetch(`${API_URL.EXECUTE}/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, language, questionId })
@@ -336,7 +335,7 @@ export default function IntervieweeDashboard() {
     setOutput(null);
 
     try {
-      const response = await fetch('http://localhost:5000/api/execute/submit', {
+      const response = await fetch(`${API_URL.EXECUTE}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, language, questionId: getCurrentQuestionId() })
@@ -408,7 +407,7 @@ export default function IntervieweeDashboard() {
       let executionResults = [];
 
       try {
-        const execResponse = await fetch('http://localhost:5000/api/execute/submit', {
+        const execResponse = await fetch(`${API_URL.EXECUTE}/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, language, questionId: getCurrentQuestionId() })

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { API_URL } from '../../config';
 import './IntervieweeLogin.css';
-
-const API_URL = 'http://localhost:5000/api/interviews';
 
 export default function IntervieweeLogin() {
   const { token } = useParams();

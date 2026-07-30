@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { API_URL } from '../config';
 
 const QuestionContext = createContext(null);
-const API_URL = 'http://localhost:5000/api';
 
 export function QuestionProvider({ children }) {
   const [questions, setQuestions] = useState([]);
