@@ -1,17 +1,20 @@
 .admin-layout {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  background: linear-gradient(135deg, #e2e8f0 0%, #f1f5f9 50%, #e2e8f0 100%);
 }
 
 .admin-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  padding-top: 64px;
+  min-height: 100vh;
 }
 
 .admin-main {
   flex: 1;
-  padding: 30px;
-  background: #f8fafc;
-  overflow-y: auto;
+  padding: 24px 32px;
+  min-height: calc(100vh - 64px);
 }

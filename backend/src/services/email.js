@@ -2,11 +2,8 @@ const sgMail = require('@sendgrid/mail');
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// Debug: Log email config on startup
-console.log('Email config loaded:');
+console.log('Email config loaded');
 console.log('- SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? 'Set' : 'NOT SET');
-console.log('- EMAIL_USER:', process.env.EMAIL_USER);
-console.log('- ADMIN_EMAIL:', process.env.ADMIN_EMAIL);
 
 // Send interview invitation email
 const sendInterviewInvitation = async (interview) => {
@@ -20,49 +17,57 @@ const sendInterviewInvitation = async (interview) => {
     minute: '2-digit'
   });
 
-  console.log('Sending invitation email to:', interview.intervieweeEmail);
-  console.log('From:', process.env.EMAIL_USER);
+  const questionCount = interview.questions?.length || (interview.questionId ? 1 : 0);
 
   const msg = {
     to: interview.intervieweeEmail,
     from: process.env.EMAIL_USER || 'noreply@aiinterview.com',
-    subject: `Interview Scheduled: ${interview.questionTitle}`,
+    subject: `Interview Invitation - ${scheduledDate}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #3b82f6;">AI Coding Interview</h2>
-
-        <p>Hello ${interview.intervieweeName},</p>
-
-        <p>You have been scheduled for a coding interview. Here are the details:</p>
-
-        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p><strong>Question:</strong> ${interview.questionTitle}</p>
-          <p><strong>Date & Time:</strong> ${scheduledDate}</p>
-          <p><strong>Duration:</strong> ${interview.duration} minutes</p>
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <div style="background: #2563eb; padding: 24px; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; color: #fff; font-size: 20px;">Coding Interview Invitation</h1>
         </div>
 
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #e2e8f0;">
+        <div style="background: #fff; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+          <p style="color: #1f2937; font-size: 15px;">Hello ${interview.intervieweeName},</p>
 
-        <div style="background: #fef3c7; border: 2px solid #f59e0b; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0 0 15px; color: #92400e;">🎯 Your Access Credentials</h3>
-          <p style="margin: 10px 0;"><strong>Email:</strong> ${interview.intervieweeEmail}</p>
-          <p style="margin: 10px 0;"><strong>Secret Code:</strong> <span style="font-family: monospace; background: #fff; padding: 4px 8px; border-radius: 4px; font-size: 16px;">${interview.secretCode}</span></p>
-          <p style="margin: 15px 0 0; color: #92400e; font-size: 14px;">Keep these credentials safe. You'll need them to access the interview.</p>
+          <p style="color: #4b5563; font-size: 14px;">
+            You have been invited to complete a coding interview.
+          </p>
+
+          <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 13px;">Scheduled Time</td>
+              <td style="text-align: right; padding: 8px 0; color: #1f2937; font-weight: bold; font-size: 14px;">${scheduledDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 13px;">Duration</td>
+              <td style="text-align: right; padding: 8px 0; color: #1f2937; font-weight: bold; font-size: 14px;">${interview.duration} minutes</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 13px;">Questions</td>
+              <td style="text-align: right; padding: 8px 0; color: #1f2937; font-weight: bold; font-size: 14px;">${questionCount}</td>
+            </tr>
+          </table>
+
+          <div style="background: #fef3c7; border: 1px solid #f59e0b; padding: 16px; border-radius: 6px; margin: 20px 0;">
+            <p style="margin: 0 0 8px 0; color: #92400e; font-size: 13px; font-weight: bold;">Your Access Credentials</p>
+            <p style="margin: 0; color: #78350f; font-size: 13px;">Email: <strong>${interview.intervieweeEmail}</strong></p>
+            <p style="margin: 4px 0 0 0; color: #78350f; font-size: 13px;">Secret Code: <strong style="font-family: monospace; font-size: 16px;">${interview.secretCode}</strong></p>
+          </div>
+
+          <a href="${interviewLink}" style="display: block; background: #2563eb; color: #fff; padding: 12px 24px; text-align: center; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0;">
+            Start Interview
+          </a>
+
+          <p style="color: #9ca3af; font-size: 12px; margin-top: 20px;">
+            Please use your email and secret code to access the interview at the scheduled time.
+          </p>
         </div>
 
-        <p>To start your interview at the scheduled time, click the button below:</p>
-
-        <a href="${interviewLink}" style="display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-          Go to Interview Portal
-        </a>
-
-        <p style="margin-top: 20px;">Or copy this link:</p>
-        <p style="background: #f1f5f9; padding: 10px; border-radius: 4px; word-break: break-all;">
-          ${interviewLink}
-        </p>
-
-        <p style="color: #64748b; font-size: 12px; margin-top: 30px;">
-          Note: You can only access the interview at the scheduled time. Use your email and secret code to log in.
+        <p style="text-align: center; color: #9ca3af; font-size: 11px; margin-top: 20px;">
+          © ${new Date().getFullYear()} AI Interview Platform
         </p>
       </div>
     `
@@ -70,59 +75,64 @@ const sendInterviewInvitation = async (interview) => {
 
   try {
     await sgMail.send(msg);
-    console.log('Email sent successfully');
+    console.log('Invitation email sent to:', interview.intervieweeEmail);
     return { success: true };
   } catch (error) {
-    console.error('Error sending email:', error);
-    if (error.response) {
-      console.error(error.response.body);
-    }
+    console.error('Error sending email:', error.message);
     return { success: false, error: error.message };
   }
 };
 
-// Send interview results email to admin
+// Send results to admin
 const sendResultsToAdmin = async (interview) => {
-  // Build results HTML for multiple questions
   let resultsHtml = '';
 
   if (interview.bestScores && interview.bestScores.length > 0) {
     resultsHtml = interview.bestScores.map(bs => `
-      <div style="margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid #e5e7eb;">
-        <p style="margin: 0 0 8px 0;"><strong>${bs.questionTitle}</strong></p>
-        <p style="margin: 0; color: ${bs.passed === bs.total ? '#10b981' : '#d97706'};">
-          Best Score: ${bs.passed}/${bs.total}
-          ${bs.passed === bs.total ? '✅' : '⚠️'}
-        </p>
-      </div>
+      <p style="margin: 8px 0;">
+        <strong>${bs.questionTitle}</strong><br>
+        <span style="color: ${bs.passed === bs.total ? '#059669' : '#d97706'};">
+          Score: ${bs.passed}/${bs.total} ${bs.passed === bs.total ? '✓' : '⚠'}
+        </span>
+      </p>
     `).join('');
-  } else {
-    // Legacy single question format
-    resultsHtml = `
-      <p><strong>Question:</strong> ${interview.questionTitle || 'N/A'}</p>
-      <p><strong>Language:</strong> ${interview.result?.language || 'N/A'}</p>
-      <p><strong>Status:</strong> <span style="color: ${interview.result?.status === 'passed' ? '#10b981' : '#dc2626'}; font-weight: bold;">${interview.result?.status || 'pending'}</span></p>
-    `;
   }
 
   const msg = {
-    to: process.env.ADMIN_EMAIL || 'admin@aiinterview.com',
+    to: process.env.ADMIN_EMAIL,
     from: process.env.EMAIL_USER || 'noreply@aiinterview.com',
-    subject: `Interview Completed: ${interview.intervieweeName} - ${interview.questions?.length > 0 ? `${interview.questions.length} Questions` : interview.questionTitle}`,
+    subject: `Interview Completed - ${interview.intervieweeName}`,
     html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #10b981;">Interview Completed</h2>
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+        <div style="background: #059669; padding: 24px; border-radius: 8px 8px 0 0;">
+          <h1 style="margin: 0; color: #fff; font-size: 20px;">Interview Completed</h1>
+        </div>
 
-        <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p><strong>Interviewee:</strong> ${interview.intervieweeName}</p>
-          <p><strong>Email:</strong> ${interview.intervieweeEmail}</p>
-          <p><strong>Completed:</strong> ${interview.completedAt ? new Date(interview.completedAt).toLocaleString() : 'N/A'}</p>
-          <p><strong>Completion Type:</strong> ${interview.completionType || 'manual'}</p>
-          <hr style="margin: 16px 0; border: none; border-top: 1px solid #e5e7eb;" />
+        <div style="background: #fff; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 13px;">Candidate</td>
+              <td style="text-align: right; padding: 8px 0; color: #1f2937; font-weight: bold; font-size: 14px;">${interview.intervieweeName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 13px;">Email</td>
+              <td style="text-align: right; padding: 8px 0; color: #1f2937; font-size: 14px;">${interview.intervieweeEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; font-size: 13px;">Completed</td>
+              <td style="text-align: right; padding: 8px 0; color: #1f2937; font-size: 14px;">${interview.completedAt ? new Date(interview.completedAt).toLocaleString() : 'N/A'}</td>
+            </tr>
+          </table>
+
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
+
+          <h3 style="color: #1f2937; font-size: 14px; margin: 0 0 12px 0;">Results</h3>
           ${resultsHtml}
         </div>
 
-        <p>Log in to the admin dashboard to view the full submission and code.</p>
+        <p style="text-align: center; color: #9ca3af; font-size: 11px; margin-top: 20px;">
+          © ${new Date().getFullYear()} AI Interview Platform
+        </p>
       </div>
     `
   };
@@ -132,7 +142,7 @@ const sendResultsToAdmin = async (interview) => {
     console.log('Results email sent to admin');
     return { success: true };
   } catch (error) {
-    console.error('Error sending results email:', error);
+    console.error('Error sending results email:', error.message);
     return { success: false, error: error.message };
   }
 };

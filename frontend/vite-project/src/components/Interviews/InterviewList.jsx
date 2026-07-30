@@ -5,15 +5,9 @@ import './InterviewList.css';
 
 export default function InterviewList() {
   const navigate = useNavigate();
-  const { interviews, deleteInterview, loading } = useInterviews();
+  const { interviews, loading } = useInterviews();
   const [selectedInterview, setSelectedInterview] = useState(null);
   const [showResultsModal, setShowResultsModal] = useState(false);
-
-  const handleDelete = async (id, name) => {
-    if (window.confirm(`Are you sure you want to delete the interview with "${name}"?`)) {
-      await deleteInterview(id);
-    }
-  };
 
   const handleViewResults = (interview) => {
     setSelectedInterview(interview);
@@ -33,27 +27,24 @@ export default function InterviewList() {
   const formatStatus = (status) => {
     switch (status) {
       case 'in-progress': return 'In Progress';
-      default: return status;
+      default: return status.charAt(0).toUpperCase() + status.slice(1);
     }
   };
 
   const formatDateTime = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleString('en-US', {
-      dateStyle: 'medium',
-      timeStyle: 'short'
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
-  const handleRefresh = () => {
-    window.location.reload();
-  };
-
-  // Get questions display text
   const getQuestionsText = (interview) => {
     if (interview.questions && interview.questions.length > 0) {
       return interview.questions.length > 1
-        ? `${interview.questions[0]?.questionTitle || 'Question'} (+${interview.questions.length - 1} more)`
+        ? `${interview.questions.length} Questions`
         : interview.questions[0]?.questionTitle || interview.questionTitle;
     }
     return interview.questionTitle || 'N/A';
@@ -62,18 +53,12 @@ export default function InterviewList() {
   return (
     <div className="interview-list-container">
       <div className="list-header">
-        <h2>Interviews</h2>
+        <div className="header-title">
+          <h2>Interviews</h2>
+          <span className="count-badge">{interviews.length}</span>
+        </div>
         <div className="header-actions">
-          <button
-            className="refresh-btn"
-            onClick={handleRefresh}
-          >
-            ↻ Refresh
-          </button>
-          <button
-            className="create-btn"
-            onClick={() => navigate('/admin/interviews/new')}
-          >
+          <button className="create-btn" onClick={() => navigate('/admin/interviews/new')}>
             + Schedule Interview
           </button>
         </div>
@@ -81,60 +66,61 @@ export default function InterviewList() {
 
       {interviews.length === 0 ? (
         <div className="empty-state">
-          <p>No interviews scheduled. Schedule your first interview!</p>
+          <div className="empty-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <p>No interviews scheduled</p>
+          <span>Schedule your first interview to get started</span>
         </div>
       ) : (
-        <table className="interview-table">
-          <thead>
-            <tr>
-              <th>Question</th>
-              <th>Interviewee</th>
-              <th>Scheduled</th>
-              <th>Duration</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {interviews.map((interview) => (
-              <tr key={interview._id}>
-                <td className="title-cell">{getQuestionsText(interview)}</td>
-                <td>
-                  <div className="interviewee-info">
-                    <span className="name">{interview.intervieweeName}</span>
-                    <span className="email">{interview.intervieweeEmail}</span>
-                  </div>
-                </td>
-                <td className="date-cell">
-                  {interview.scheduledAt ? formatDateTime(interview.scheduledAt) : 'N/A'}
-                </td>
-                <td className="duration-cell">{interview.duration} min</td>
-                <td>
-                  <span className={`status-badge ${getStatusClass(interview.status)}`}>
-                    {formatStatus(interview.status)}
+        <div className="interviews-grid">
+          {interviews.map((interview) => (
+            <div key={interview._id} className="interview-card">
+              <div className="card-header">
+                <div className="candidate-info">
+                  <h3>{interview.intervieweeName}</h3>
+                  <span className="email">{interview.intervieweeEmail}</span>
+                </div>
+                <span className={`status-badge ${getStatusClass(interview.status)}`}>
+                  {formatStatus(interview.status)}
+                </span>
+              </div>
+
+              <div className="card-details">
+                <div className="detail-item">
+                  <span className="detail-label">Questions</span>
+                  <span className="detail-value">{getQuestionsText(interview)}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Scheduled</span>
+                  <span className="detail-value">
+                    {interview.scheduledAt ? formatDateTime(interview.scheduledAt) : 'N/A'}
                   </span>
-                </td>
-                <td className="actions-cell">
-                  {(interview.status === 'completed' || interview.status === 'in-progress') && (
-                    <button
-                      className="results-btn"
-                      onClick={() => handleViewResults(interview)}
-                    >
-                      {interview.status === 'completed' ? 'Results' : 'View Progress'}
-                    </button>
-                  )}
+                </div>
+                <div className="detail-item">
+                  <span className="detail-label">Duration</span>
+                  <span className="detail-value">{interview.duration} min</span>
+                </div>
+              </div>
+
+              {(interview.status === 'completed' || interview.status === 'in-progress') && (
+                <div className="card-actions">
                   <button
-                    className="delete-btn"
-                    onClick={() => handleDelete(interview._id, interview.intervieweeName)}
-                    disabled={loading}
+                    className="results-btn"
+                    onClick={() => handleViewResults(interview)}
                   >
-                    Delete
+                    {interview.status === 'completed' ? 'View Results' : 'View Progress'}
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Results Modal */}
@@ -148,49 +134,42 @@ export default function InterviewList() {
             <div className="modal-body">
               <div className="result-summary">
                 <div className="result-item">
-                  <span className="label">Interviewee:</span>
+                  <span className="label">Candidate</span>
                   <span className="value">{selectedInterview.intervieweeName}</span>
                 </div>
                 <div className="result-item">
-                  <span className="label">Email:</span>
+                  <span className="label">Email</span>
                   <span className="value">{selectedInterview.intervieweeEmail}</span>
                 </div>
                 <div className="result-item">
-                  <span className="label">Status:</span>
+                  <span className="label">Status</span>
                   <span className={`value status-badge ${getStatusClass(selectedInterview.status)}`}>
                     {formatStatus(selectedInterview.status)}
                   </span>
                 </div>
                 <div className="result-item">
-                  <span className="label">Started:</span>
+                  <span className="label">Started</span>
                   <span className="value">
                     {selectedInterview.startedAt ? formatDateTime(selectedInterview.startedAt) : 'Not started'}
                   </span>
                 </div>
                 <div className="result-item">
-                  <span className="label">Completed:</span>
+                  <span className="label">Completed</span>
                   <span className="value">
                     {selectedInterview.completedAt ? formatDateTime(selectedInterview.completedAt) : 'Not completed'}
                   </span>
-                </div>
-                <div className="result-item">
-                  <span className="label">Completion Type:</span>
-                  <span className="value">{selectedInterview.completionType || 'N/A'}</span>
                 </div>
               </div>
 
               <h4>Question Results</h4>
 
-              {/* Show assigned questions from the interview */}
               {selectedInterview.questions && selectedInterview.questions.length > 0 ? (
                 <div className="question-results">
                   {selectedInterview.questions.map((q, idx) => {
-                    // Find best score for this question
                     const bestScore = selectedInterview.bestScores?.find(
                       bs => bs.questionId?.toString() === q.questionId?.toString() ||
                             bs.questionId === q.questionId
                     );
-                    // Find submissions for this question
                     const submissions = selectedInterview.allSubmissions?.filter(
                       s => s.questionId?.toString() === q.questionId?.toString() ||
                            s.questionId === q.questionId
@@ -206,11 +185,8 @@ export default function InterviewList() {
                         <div className="question-result-header">
                           <span className="question-title">{q.questionTitle || `Question ${idx + 1}`}</span>
                           <span className={`score-badge ${isAccepted ? 'accepted' : hasSubmissions ? 'partial' : 'not-attempted'}`}>
-                            {isAccepted ? '✓ Accepted' : hasSubmissions ? `${passed}/${total}` : 'Not attempted'}
+                            {isAccepted ? '✓ Passed' : hasSubmissions ? `${passed}/${total}` : 'Not attempted'}
                           </span>
-                        </div>
-                        <div className="question-result-details">
-                          <span className="submits-count">Submissions: {submissions.length}</span>
                         </div>
                         {hasSubmissions && (
                           <div className="submission-code">
@@ -238,11 +214,8 @@ export default function InterviewList() {
                         <div className="question-result-header">
                           <span className="question-title">{bs.questionTitle}</span>
                           <span className={`score-badge ${isAccepted ? 'accepted' : 'partial'}`}>
-                            {isAccepted ? '✓ Accepted' : `${bs.passed}/${bs.total}`}
+                            {isAccepted ? '✓ Passed' : `${bs.passed}/${bs.total}`}
                           </span>
-                        </div>
-                        <div className="question-result-details">
-                          <span className="submits-count">Submissions: {submissions.length}</span>
                         </div>
                         {submissions.length > 0 && (
                           <div className="submission-code">

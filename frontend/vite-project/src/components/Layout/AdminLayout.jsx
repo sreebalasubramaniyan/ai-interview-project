@@ -1,6 +1,5 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Sidebar from './Sidebar';
 import Header from './Header';
 import './AdminLayout.css';
 
@@ -13,9 +12,8 @@ export default function AdminLayout() {
 
   return (
     <div className="admin-layout">
-      <Sidebar />
+      <Header />
       <div className="admin-content">
-        <Header />
         <main className="admin-main">
           <Outlet />
         </main>

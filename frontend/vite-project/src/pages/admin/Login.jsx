@@ -25,12 +25,15 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1>AI Interview</h1>
-        <h2>Admin Login</h2>
+        <div className="login-brand">
+          <h1>AI Interview</h1>
+          <p>Admin Portal</p>
+        </div>
+        <h2>Sign in to your account</h2>
         <form onSubmit={handleSubmit}>
           {error && <div className="error-message">{error}</div>}
           <div className="form-group">
-            <label>Email</label>
+            <label>Email Address</label>
             <input
               type="email"
               value={email}
@@ -45,12 +48,12 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
+              placeholder="Enter your password"
               required
             />
           </div>
           <button type="submit" className="login-btn" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
         <p className="demo-hint">

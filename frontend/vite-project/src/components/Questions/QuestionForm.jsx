@@ -1,11 +1,14 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuestions } from '../../context/QuestionContext';
+import API_URL from '../../config';
 import './QuestionForm.css';
 
 export default function QuestionForm() {
   const navigate = useNavigate();
-  const { addQuestion, loading } = useQuestions();
+  const { id } = useParams();
+  const { addQuestion, updateQuestion, loading } = useQuestions();
+  const isEditMode = Boolean(id);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -14,6 +17,37 @@ export default function QuestionForm() {
     constraints: '',
     testCases: [{ input: '', output: '' }]
   });
+
+  const [fetching, setFetching] = useState(false);
+
+  // For edit mode - fetch question data from API
+  useEffect(() => {
+    if (isEditMode && id) {
+      const fetchQuestion = async () => {
+        setFetching(true);
+        try {
+          const response = await fetch(`${API_URL}/questions/${id}`);
+          if (response.ok) {
+            const question = await response.json();
+            setFormData({
+              title: question.title || '',
+              difficulty: question.difficulty || 'Easy',
+              description: question.description || '',
+              constraints: (question.constraints || []).join('\n'),
+              testCases: question.testCases && question.testCases.length > 0
+                ? question.testCases
+                : [{ input: '', output: '' }]
+            });
+          }
+        } catch (err) {
+          console.error('Error fetching question:', err);
+        } finally {
+          setFetching(false);
+        }
+      };
+      fetchQuestion();
+    }
+  }, [id, isEditMode]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,13 +85,17 @@ export default function QuestionForm() {
       testCases: formData.testCases.filter(tc => tc.input && tc.output)
     };
 
-    await addQuestion(questionData);
+    if (isEditMode) {
+      await updateQuestion(id, questionData);
+    } else {
+      await addQuestion(questionData);
+    }
     navigate('/admin/questions');
   };
 
   return (
     <div className="question-form-container">
-      <h2>Create New Question</h2>
+      <h2>{isEditMode ? 'Edit Question' : 'Create New Question'}</h2>
       <form onSubmit={handleSubmit} className="question-form">
         <div className="form-group">
           <label>Title</label>
@@ -151,7 +189,7 @@ export default function QuestionForm() {
 
         <div className="form-actions">
           <button type="submit" className="submit-btn" disabled={loading}>
-            {loading ? 'Saving...' : 'Save Question'}
+            {loading ? 'Saving...' : isEditMode ? 'Update Question' : 'Save Question'}
           </button>
           <button
             type="button"

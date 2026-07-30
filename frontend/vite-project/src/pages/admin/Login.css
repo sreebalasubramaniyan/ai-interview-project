@@ -3,30 +3,42 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8fafc;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  padding: 20px;
 }
 
 .login-card {
   background: white;
-  padding: 40px;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 48px;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   text-align: center;
 }
 
-.login-card h1 {
+.login-brand {
+  margin-bottom: 32px;
+}
+
+.login-brand h1 {
   margin: 0 0 8px;
-  color: #3b82f6;
-  font-size: 1.8rem;
+  color: #0f172a;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.login-brand p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9rem;
 }
 
 .login-card h2 {
-  margin: 0 0 30px;
+  margin: 0 0 32px;
   color: #1e293b;
-  font-size: 1.3rem;
-  font-weight: 500;
+  font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .login-card form {
@@ -36,11 +48,13 @@
 }
 
 .error-message {
-  padding: 12px;
-  background: #fee2e2;
+  padding: 12px 16px;
+  background: #fef2f2;
   color: #dc2626;
-  border-radius: 6px;
-  font-size: 0.9rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  text-align: left;
+  border: 1px solid #fee2e2;
 }
 
 .form-group {
@@ -52,36 +66,41 @@
 
 .form-group label {
   font-weight: 600;
-  color: #334155;
-  font-size: 0.9rem;
+  color: #374151;
+  font-size: 0.875rem;
 }
 
 .form-group input {
-  padding: 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 1rem;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #60a5fa;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .login-btn {
-  padding: 14px;
-  background: #3b82f6;
+  padding: 14px 24px;
+  background: #2563eb;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 1rem;
-  transition: background 0.2s;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+  margin-top: 8px;
 }
 
 .login-btn:hover:not(:disabled) {
-  background: #2563eb;
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
 .login-btn:disabled {
@@ -90,7 +109,10 @@
 }
 
 .demo-hint {
-  margin: 20px 0 0;
-  font-size: 0.85rem;
-  color: #64748b;
+  margin: 24px 0 0;
+  font-size: 0.8rem;
+  color: #9ca3af;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
 }

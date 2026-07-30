@@ -30,6 +30,7 @@ function App() {
                 <Route index element={<Dashboard />} />
                 <Route path="questions" element={<QuestionsPage />} />
                 <Route path="questions/new" element={<NewQuestionPage />} />
+                <Route path="questions/edit/:id" element={<NewQuestionPage />} />
                 <Route path="interviews" element={<InterviewsPage />} />
                 <Route path="interviews/new" element={<NewInterviewPage />} />
               </Route>
