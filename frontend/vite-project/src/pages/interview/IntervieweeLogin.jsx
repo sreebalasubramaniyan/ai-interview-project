@@ -18,7 +18,7 @@ export default function IntervieweeLogin() {
   useEffect(() => {
     const fetchInterview = async () => {
       try {
-        const response = await fetch(`${API_URL}/token/${token}`);
+        const response = await fetch(`${URLs.INTERVIEW}/token/${token}`);
         const data = await response.json();
 
         if (response.ok && data) {
@@ -93,7 +93,7 @@ export default function IntervieweeLogin() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${URLs.BASE}/token/${token}/access`, {
+      const response = await fetch(`${URLs.INTERVIEW}/token/${token}/access`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

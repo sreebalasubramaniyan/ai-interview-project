@@ -34,7 +34,7 @@ export default function IntervieweeDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${API_URL}/token/${token}`);
+        const response = await fetch(`${URLs.INTERVIEW}/token/${token}`);
 
         if (!response.ok) {
           const storedData = sessionStorage.getItem('interviewData');
@@ -110,7 +110,7 @@ export default function IntervieweeDashboard() {
           }
         }
 
-        await fetch(`${API_URL}/token/${token}/start`, {
+        await fetch(`${URLs.INTERVIEW}/token/${token}/start`, {
           method: 'POST'
         });
 
@@ -182,7 +182,7 @@ export default function IntervieweeDashboard() {
       }
 
       // Finish the interview
-      const finishResponse = await fetch(`${API_URL}/token/${token}/finish`, {
+      const finishResponse = await fetch(`${URLs.INTERVIEW}/token/${token}/finish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -358,7 +358,7 @@ export default function IntervieweeDashboard() {
 
         // Also save to backend with questionIndex
         try {
-          await fetch(`${API_URL}/token/${encodeURIComponent(token)}/submit`, {
+          await fetch(`${URLs.INTERVIEW}/token/${encodeURIComponent(token)}/submit`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -433,7 +433,7 @@ export default function IntervieweeDashboard() {
       console.log('Calling finish endpoint...');
 
       // Now finish the interview
-      const finishResponse = await fetch(`${API_URL}/token/${encodeURIComponent(token)}/finish`, {
+      const finishResponse = await fetch(`${URLs.INTERVIEW}/token/${encodeURIComponent(token)}/finish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
