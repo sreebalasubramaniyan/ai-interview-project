@@ -326,6 +326,29 @@
   color: var(--text-muted);
 }
 
+.login-toggle {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.login-toggle p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.login-toggle button {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.login-toggle button:hover {
+  text-decoration: underline;
+}
+
 /* Footer */
 .home-footer {
   padding: 32px 64px;

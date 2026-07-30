@@ -4,10 +4,14 @@ import Header from './Header';
 import './AdminLayout.css';
 
 export default function AdminLayout() {
-  const { admin } = useAuth();
+  const { admin, loading } = useAuth();
+
+  if (loading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+  }
 
   if (!admin) {
-    return <Navigate to="/admin/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return (

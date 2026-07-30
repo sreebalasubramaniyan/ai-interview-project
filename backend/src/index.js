@@ -7,6 +7,7 @@ const connectDB = require('./config/db');
 const questionsRouter = require('./routes/questions');
 const interviewsRouter = require('./routes/interviews');
 const executeRouter = require('./routes/execute');
+const authRouter = require('./routes/auth');
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.use('/api/auth', authRouter);
 app.use('/api/questions', questionsRouter);
 app.use('/api/interviews', interviewsRouter);
 app.use('/api/execute', executeRouter);

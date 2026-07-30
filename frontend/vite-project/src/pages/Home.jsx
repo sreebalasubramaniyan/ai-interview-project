@@ -5,11 +5,13 @@ import './Home.css';
 
 export default function Home() {
   const navigate = useNavigate();
-  const { login, loading } = useAuth();
+  const { login, register, loading, admin } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [darkMode, setDarkMode] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
 
   useEffect(() => {
     if (darkMode) {
@@ -19,11 +21,23 @@ export default function Home() {
     }
   }, [darkMode]);
 
+  useEffect(() => {
+    if (admin) {
+      navigate('/admin');
+    }
+  }, [admin, navigate]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    const result = await login(email, password);
+    let result;
+    if (isRegister) {
+      result = await register(name, email, password);
+    } else {
+      result = await login(email, password);
+    }
+
     if (result.success) {
       navigate('/admin');
     } else {
@@ -44,8 +58,8 @@ export default function Home() {
         <div className="home-logo">
           <div className="logo-square">
             <svg viewBox="0 0 24 24" fill="none">
-              <path d="M12 5L6 12L12 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M6 12H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M12 5L6 12l6 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M6 12h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </div>
           <span className="logo-text"> InterviewPro</span>
@@ -97,12 +111,25 @@ export default function Home() {
                     <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/>
                   </svg>
                 </div>
-                <h2>Sign in to your account</h2>
-                <p>Enter your credentials to continue</p>
+                <h2>{isRegister ? 'Create an account' : 'Sign in to your account'}</h2>
+                <p>{isRegister ? 'Enter your details to get started' : 'Enter your credentials to continue'}</p>
               </div>
 
               <form onSubmit={handleSubmit} className="login-form">
                 {error && <div className="login-error">{error}</div>}
+
+                {isRegister && (
+                  <div className="form-group">
+                    <label>Full Name</label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Doe"
+                      required
+                    />
+                  </div>
+                )}
 
                 <div className="form-group">
                   <label>Email address</label>
@@ -123,19 +150,25 @@ export default function Home() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     required
+                    minLength={6}
                   />
                 </div>
 
                 <button type="submit" className="login-btn" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Continue'}
+                  {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Continue'}
                   <svg viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd"/>
                   </svg>
                 </button>
               </form>
 
-              <div className="login-footer">
-                <p>Demo: admin@aiinterview.com / admin123</p>
+              <div className="login-toggle">
+                <p>
+                  {isRegister ? 'Already have an account?' : "Don't have an account?"}
+                  <button type="button" onClick={() => { setIsRegister(!isRegister); setError(''); }}>
+                    {isRegister ? ' Sign in' : ' Register'}
+                  </button>
+                </p>
               </div>
             </div>
           </div>
