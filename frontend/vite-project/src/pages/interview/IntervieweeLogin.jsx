@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { API_URL } from '../../config';
+import API_URL, { API_URL as URLs } from '../../config';
 import './IntervieweeLogin.css';
 
 export default function IntervieweeLogin() {
@@ -93,7 +93,7 @@ export default function IntervieweeLogin() {
     setLoading(true);
 
     try {
-      const response = await fetch(`${API_URL}/token/${token}/access`, {
+      const response = await fetch(`${URLs.BASE}/token/${token}/access`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
