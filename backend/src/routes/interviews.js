@@ -493,13 +493,19 @@ router.post('/', async (req, res) => {
     const newInterview = await interview.save();
 
     // Send invitation email
-    if (process.env.SENDGRID_API_KEY && process.env.SENDGRID_API_KEY !== 'YOUR_SENDGRID_API_KEY') {
+    if (process.env.EMAIL_PASS || process.env.SENDGRID_API_KEY) {
       try {
-        await sendInterviewInvitation(newInterview);
-        console.log('Invitation email sent successfully');
+        const emailResult = await sendInterviewInvitation(newInterview);
+        if (emailResult && emailResult.success) {
+          console.log('Invitation email sent successfully');
+        } else {
+          console.error('Failed to send invitation email:', emailResult?.error);
+        }
       } catch (emailError) {
         console.error('Failed to send invitation email:', emailError.message);
       }
+    } else {
+      console.warn('Email credentials not configured. Email skipped.');
     }
 
     res.status(201).json(newInterview);

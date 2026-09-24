@@ -1,9 +1,21 @@
-const sgMail = require('@sendgrid/mail');
+const nodemailer = require('nodemailer');
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+const createTransporter = () => {
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+    return nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS.replace(/\s+/g, '')
+      }
+    });
+  }
+  return null;
+};
 
 console.log('Email config loaded');
-console.log('- SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? 'Set' : 'NOT SET');
+console.log('- GMAIL EMAIL_USER:', process.env.EMAIL_USER ? process.env.EMAIL_USER : 'NOT SET');
+console.log('- GMAIL EMAIL_PASS:', process.env.EMAIL_PASS ? 'Set' : 'NOT SET');
 
 // Send interview invitation email
 const sendInterviewInvitation = async (interview) => {
@@ -19,9 +31,15 @@ const sendInterviewInvitation = async (interview) => {
 
   const questionCount = interview.questions?.length || (interview.questionId ? 1 : 0);
 
-  const msg = {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.error('Email credentials not configured (EMAIL_USER / EMAIL_PASS missing)');
+    return { success: false, error: 'Email credentials missing' };
+  }
+
+  const mailOptions = {
+    from: `"AI Interview Platform" <${process.env.EMAIL_USER}>`,
     to: interview.intervieweeEmail,
-    from: process.env.EMAIL_USER || 'noreply@aiinterview.com',
     subject: `Interview Invitation - ${scheduledDate}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
@@ -74,12 +92,15 @@ const sendInterviewInvitation = async (interview) => {
   };
 
   try {
-    await sgMail.send(msg);
-    console.log('Invitation email sent to:', interview.intervieweeEmail);
-    return { success: true };
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Invitation email sent successfully to:', interview.intervieweeEmail, 'ID:', info.messageId);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending email:', error.message);
-    return { success: false, error: error.message };
+    return { 
+      success: false, 
+      error: error.message 
+    };
   }
 };
 
@@ -98,9 +119,15 @@ const sendResultsToAdmin = async (interview) => {
     `).join('');
   }
 
-  const msg = {
+  const transporter = createTransporter();
+  if (!transporter) {
+    console.error('Email credentials not configured for admin report');
+    return { success: false, error: 'Email credentials missing' };
+  }
+
+  const mailOptions = {
+    from: `"AI Interview Platform" <${process.env.EMAIL_USER}>`,
     to: process.env.ADMIN_EMAIL,
-    from: process.env.EMAIL_USER || 'noreply@aiinterview.com',
     subject: `Interview Completed - ${interview.intervieweeName}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
@@ -138,12 +165,15 @@ const sendResultsToAdmin = async (interview) => {
   };
 
   try {
-    await sgMail.send(msg);
-    console.log('Results email sent to admin');
-    return { success: true };
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Results email sent to admin. ID:', info.messageId);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending results email:', error.message);
-    return { success: false, error: error.message };
+    return { 
+      success: false, 
+      error: error.message 
+    };
   }
 };
 

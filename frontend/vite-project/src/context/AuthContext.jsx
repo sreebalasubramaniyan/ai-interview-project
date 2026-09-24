@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { API_URL as ENDPOINTS } from '../config';
 
 const AuthContext = createContext(null);
 
-const API_URL = 'http://localhost:5000/api/auth';
+const API_URL = ENDPOINTS.AUTH;
 
 export function AuthProvider({ children }) {
   const [admin, setAdmin] = useState(null);
