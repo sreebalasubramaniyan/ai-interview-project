@@ -493,7 +493,7 @@ router.post('/', async (req, res) => {
     const newInterview = await interview.save();
 
     // Send invitation email
-    if (process.env.EMAIL_PASS || process.env.SENDGRID_API_KEY) {
+    if (process.env.RESEND_API_KEY || process.env.EMAIL_PASS || process.env.SENDGRID_API_KEY) {
       try {
         const emailResult = await sendInterviewInvitation(newInterview);
         if (emailResult && emailResult.success) {
