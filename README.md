@@ -45,46 +45,6 @@ graph TB
 
 ---
 
-## System Workflow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Recruiter
-    participant Frontend as Web App
-    participant Backend as API Server
-    participant Database as MongoDB
-    participant Email as Email Service
-    actor Candidate
-
-    Recruiter->>Frontend: Schedule interview with selected questions
-    Frontend->>Backend: POST /api/interviews
-    Backend->>Database: Save interview record (pending)
-    Backend->>Email: Send invitation with access token and PIN
-    Email-->>Candidate: Delivery to candidate inbox
-
-    Candidate->>Frontend: Open assessment link
-    Candidate->>Frontend: Enter email and 6-character PIN
-    Frontend->>Backend: Validate credentials & start timer
-    Backend->>Database: Update status (in-progress)
-
-    loop Problem Solving
-        Candidate->>Frontend: Write code in Monaco editor
-        Candidate->>Frontend: Click Run Code
-        Frontend->>Backend: POST /api/execute/run
-        Backend->>Backend: Execute in sandbox with 5s timeout
-        Backend-->>Frontend: Return test case results
-    end
-
-    Candidate->>Frontend: Submit final assessment
-    Frontend->>Backend: POST /api/interviews/finish
-    Backend->>Database: Compute score & update status (completed)
-    Backend->>Email: Send scorecard to recruiter
-    Email-->>Recruiter: Delivery of candidate scorecard
-```
-
----
-
 ## Core Features
 
 - **Recruiter Dashboard**: Manage question banks, schedule assessments, and review candidate scorecards.
