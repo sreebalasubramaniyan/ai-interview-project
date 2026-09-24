@@ -1,8 +1,11 @@
 const { Resend } = require('resend');
 const nodemailer = require('nodemailer');
 
-// Initialize Resend if API key is provided
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Dynamically obtain Resend client to avoid stale or whitespace-padded environment variables
+const getResendClient = () => {
+  const key = process.env.RESEND_API_KEY ? process.env.RESEND_API_KEY.trim() : null;
+  return key ? new Resend(key) : null;
+};
 
 // Initialize Nodemailer as fallback
 const createNodemailerTransporter = () => {
@@ -10,7 +13,7 @@ const createNodemailerTransporter = () => {
     return nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
+        user: process.env.EMAIL_USER.trim(),
         pass: process.env.EMAIL_PASS.replace(/\s+/g, '')
       }
     });
@@ -24,7 +27,9 @@ console.log('- GMAIL EMAIL_USER:', process.env.EMAIL_USER ? process.env.EMAIL_US
 
 // Send interview invitation email
 const sendInterviewInvitation = async (interview) => {
-  const interviewLink = `${process.env.FRONTEND_URL}/interview/${interview.accessToken}`;
+  let frontendBase = (process.env.FRONTEND_URL || 'http://localhost:5173').trim();
+  frontendBase = frontendBase.replace(/\/+$/, '').replace(/\/admin$/i, '');
+  const interviewLink = `${frontendBase}/interview/${interview.accessToken}`;
   const scheduledDate = new Date(interview.scheduledAt).toLocaleString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -86,6 +91,7 @@ const sendInterviewInvitation = async (interview) => {
   `;
 
   // 1. Try Resend if configured (uses HTTPS port 443 - works on Render)
+  const resend = getResendClient();
   if (resend) {
     try {
       const fromEmail = process.env.RESEND_FROM || 'AI Interview <onboarding@resend.dev>';
@@ -97,8 +103,8 @@ const sendInterviewInvitation = async (interview) => {
       });
 
       if (result.error) {
-        console.error('Resend error sending invitation:', result.error);
-        return { success: false, error: result.error.message };
+        console.error('Resend error sending invitation:', JSON.stringify(result.error));
+        return { success: false, error: result.error.message, details: result.error };
       }
 
       console.log('Invitation email sent via Resend successfully to:', interview.intervieweeEmail, 'ID:', result.data?.id);
@@ -180,6 +186,7 @@ const sendResultsToAdmin = async (interview) => {
   `;
 
   // 1. Try Resend if configured
+  const resend = getResendClient();
   if (resend) {
     try {
       const fromEmail = process.env.RESEND_FROM || 'AI Interview <onboarding@resend.dev>';
@@ -191,8 +198,8 @@ const sendResultsToAdmin = async (interview) => {
       });
 
       if (result.error) {
-        console.error('Resend error sending results email:', result.error);
-        return { success: false, error: result.error.message };
+        console.error('Resend error sending results email:', JSON.stringify(result.error));
+        return { success: false, error: result.error.message, details: result.error };
       }
 
       console.log('Results email sent via Resend to admin. ID:', result.data?.id);

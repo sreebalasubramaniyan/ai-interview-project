@@ -493,22 +493,27 @@ router.post('/', async (req, res) => {
     const newInterview = await interview.save();
 
     // Send invitation email
+    let emailStatus = { success: false };
     if (process.env.RESEND_API_KEY || process.env.EMAIL_PASS || process.env.SENDGRID_API_KEY) {
       try {
-        const emailResult = await sendInterviewInvitation(newInterview);
-        if (emailResult && emailResult.success) {
-          console.log('Invitation email sent successfully');
+        emailStatus = await sendInterviewInvitation(newInterview);
+        if (emailStatus && emailStatus.success) {
+          console.log('Invitation email sent successfully to:', newInterview.intervieweeEmail);
         } else {
-          console.error('Failed to send invitation email:', emailResult?.error);
+          console.error('Failed to send invitation email:', emailStatus?.error, emailStatus?.details);
         }
       } catch (emailError) {
         console.error('Failed to send invitation email:', emailError.message);
+        emailStatus = { success: false, error: emailError.message };
       }
     } else {
-      console.warn('Email credentials not configured. Email skipped.');
+      console.warn('Email credentials not configured in environment. Email skipped.');
+      emailStatus = { success: false, error: 'No email credentials configured' };
     }
 
-    res.status(201).json(newInterview);
+    const responseData = newInterview.toObject();
+    responseData.emailStatus = emailStatus;
+    res.status(201).json(responseData);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
